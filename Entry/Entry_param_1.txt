@@ -1,0 +1,5 @@
+File: Calibrage_0001.fast
+Path for the file: /home/garrido/Documents/Arronax_02_2017/
+Background extraction: no sub
+Calibrate particle: proton
+Time sampling (s): 1.
