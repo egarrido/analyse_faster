@@ -87,7 +87,7 @@ void EntryParameters(int config_simu)
 					}
 					if(ind_value==3)
 						if(!buffer.compare("proton")||!buffer.compare("Proton")||!buffer.compare("p"))
-							Value_init[ind_value]=0;
+							Value_init[ind_value]=calib_data[2];
 					if(ind_value>3)
 					{
 						value=(double)atof(buffer.c_str());
