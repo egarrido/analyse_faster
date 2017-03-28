@@ -107,7 +107,7 @@ void EntryParameters(int config_simu)
 	}	
 
 	data_faster_file="../DATA/gaussian_0001.fast";
-	filename=path_file+data_file;
+	filename=path_file+data_file; 
 	ifstream datafile_faster(filename.c_str());
 	if(!datafile_faster)
 	{
@@ -628,7 +628,7 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 		}
 	}
 	faster_file_reader_close(reader);
-	if(signal_bdf==1&&bkgnd_param==0)
+	if(signal_bdf==1&&bkgnd_param==1)
 		for(int i=0;i<N_STRIPS;i++)
 		{
 			offXY[i][0]=bdfX[i]/count_X;

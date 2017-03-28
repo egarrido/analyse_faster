@@ -58,8 +58,8 @@ const int MAX_SMPL=1000;
 const int MAX_INTEGR=1000000;
 
 // Manip Mai 2014 : X->4 Y->6 Scaler->1009
-const int LabelX=4;
-const int LabelY=6;
+const int LabelX=11;
+const int LabelY=12;
 const int LabelCount=1009;
 const int LabelScaler=9;
 const int LabelHVp=102;
