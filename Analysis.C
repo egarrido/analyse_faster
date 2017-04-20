@@ -799,8 +799,6 @@ int main(int argc, char** argv)
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
-	double chargeTot_X=0.;
-	double chargeTot_Y=0.;
 	double chargeOverT=0.;
 	double Threshold=0.;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double offset=25.;
@@ -907,8 +905,6 @@ int main(int argc, char** argv)
 			if(area_end==0&&fasterTime>signal_time[count_area][1])
 				area_end=1;
 
-			chargeTot_X=0;
-			chargeTot_Y=0;
 			if(bkgnd_param==3)
 			{
 				sum_val=0.;
@@ -917,10 +913,17 @@ int main(int argc, char** argv)
 				{
 					case LabelX:
 						if(area_end==0)
-							chargeTot_signal_X=sum_val;
+							chargeTot_signal_X+=sum_val;
+						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
+							ChX->SetAt(val,j);
+						isLabelX=1;
 					break;
 					case LabelY:
-							chargeTot_signal_Y=sum_val;
+						if(area_end==0)
+							chargeTot_signal_Y+=sum_val;
+						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
+							ChY->SetAt(val,j);
+						isLabelY=1;
 					break;
 				}
 			}
@@ -939,7 +942,6 @@ int main(int argc, char** argv)
 							// val=TMath::Max(charge-bdfX[j],0.);
 							if(val<bdfX[j]*factor_bdf)
 								val=0.; 
-							chargeTot_X+=val;
 							// ChX->SetAt(val*corrXY[j][0],j);
 							ChX->SetAt(val,j);
 							isLabelX=1;
@@ -951,7 +953,6 @@ int main(int argc, char** argv)
 							// val=TMath::Max(charge-bdfY[j],0.);
 							if(val<bdfY[j]*factor_bdf)
 								val=0.; 
-							chargeTot_Y+=val;
 							// ChY->SetAt(val*corrXY[j][1],j);
 							ChY->SetAt(val,j);
 							isLabelY=1;
@@ -1328,7 +1329,6 @@ int main(int argc, char** argv)
 		cout<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
 		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 
-	// cout<<chargeTot_X<<" "<<chargeTot_Y<<endl;
 	cout<<"Charge totale "<<chargeTot_pC<<" charge partielle "<<chargeOverT<<" charge signal X"<<chargeTot_signal_X<<" charge signal Y"<<chargeTot_signal_Y<<endl;
 	// cout<<nIntegration<<endl;
 
