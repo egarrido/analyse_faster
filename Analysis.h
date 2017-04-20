@@ -35,6 +35,7 @@
 #include <math.h>
 #include <vector>
 #include <sstream>
+#include <fstream>
 #include "Riostream.h"
 
 #include "fasterac/fasterac.h"
@@ -47,6 +48,7 @@ std::vector<string> Variable_init;
 std::vector<double> Value_init;
 
 string data_faster_file;
+string data_audio_file;
 int bkgnd_param=0;
 
 const int N_box_per_irradation_max=5000;
@@ -58,16 +60,20 @@ const int MAX_SMPL=1000;
 const int MAX_INTEGR=1000000;
 
 // Manip Mai 2014 : X->4 Y->6 Scaler->1009
-const int LabelX=11;
-const int LabelY=12;
+const int LabelX=4;
+const int LabelY=6;
 const int LabelCount=1009;
 const int LabelScaler=9;
 const int LabelHVp=102;
 const int LabelHVn=101;
 
+int Strip_label;
+int Strip_number;
+
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;
-const double SamplingTime=1.;
+// const double SamplingTime=1.;
+double SamplingTime=1.;
 int nbSummedSample;
 const double default_offset=0.419;		// 0.418   pC
 const double defaultRange_pC=24;    	// 24   pC
