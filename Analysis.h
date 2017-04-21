@@ -47,6 +47,9 @@
 std::vector<string> Variable_init;
 std::vector<double> Value_init;
 
+std::vector<double> PreSBF;
+std::vector<double> PostSBF;
+
 string data_faster_file;
 string data_audio_file;
 int bkgnd_param=0;

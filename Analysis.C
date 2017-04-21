@@ -307,7 +307,7 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 	double yl2,yl1,yr1,yr2,h;
 	double dyl2,dyl1,dyr1,dyr2;
 	double test_signal;
-	double seuilD=2000.;
+	double seuilD=100.;
 	double seuilS=5.E-4;
 	double bdfX[N_STRIPS];
 	double bdfY[N_STRIPS];
@@ -631,7 +631,7 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 	int k=0;
 	int signal_bdf=0;
 
-	if(signal_bdf==1&&bkgnd_param==1)
+	if(bkgnd_param==1||bkgnd_param==3)
 	{
 		for(int i=0;i<N_STRIPS;i++)
 		{
@@ -670,82 +670,225 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 			}
 		}
 		faster_file_reader_close(reader);
-		for(int i=0;i<N_STRIPS;i++)
-		{
-			offXY[i][0]=bdfX[i]/count_X;
-			offXY[i][1]=bdfY[i]/count_Y;
-		}
-		TCanvas *cBDF = new TCanvas("Bruit de fond");
-		cBDF->SetCanvasSize(1000,500);
-		cBDF->Divide(1,2);
-		TH1F *hBdfX = new TH1F("hBdfX","Background for X strips",N_STRIPS,.5,32.5);
-		TH1F *hBdfY = new TH1F("hBdfY","Background for Y strips",N_STRIPS,.5,32.5);
-		for(int i=0;i<N_STRIPS;i++)
-		{
-			// bdfX[i]=offset;
-			// bdfY[i]=offset;
-			bdfX[i]=offXY[i][0];
-			bdfY[i]=offXY[i][1];
-			hBdfX->SetBinContent(i+1,bdfX[i]);
-			hBdfY->SetBinContent(i+1,bdfY[i]);
-			// cout<<bdfX[i]<<" "<<bdfY[i]<<endl;
-		}
-		cBDF->cd(1);
-		hBdfX->SetFillColor(2);
-		hBdfX->GetXaxis()->SetTickSize(0.01);
-		hBdfX->GetXaxis()->SetNdivisions(N_STRIPS);
-		hBdfX->GetXaxis()->SetTitle("Strip");
-		hBdfX->GetXaxis()->CenterTitle();
-		hBdfX->GetXaxis()->SetTickSize(0.01);
-		hBdfX->GetXaxis()->SetTitleSize(0.06);
-		hBdfX->GetXaxis()->SetLabelSize(0.05);
-		hBdfX->GetYaxis()->SetTickSize(0.01);
-		hBdfX->GetYaxis()->SetTitle("Charge (pC)");
-		hBdfX->GetYaxis()->CenterTitle();
-		hBdfX->GetYaxis()->SetTickSize(0.01);
-		hBdfX->GetYaxis()->SetTitleSize(0.06);
-		hBdfX->GetYaxis()->SetLabelSize(0.05);
-		hBdfX->SetBarWidth(0.8);
-		hBdfX->SetBarOffset(0.1);
-		hBdfX->SetStats(0);
-		hBdfX->Draw("b");
-		hBdfX->Write("BdfX");
-		cBDF->cd(2);
-		hBdfY->SetFillColor(4);
-		hBdfY->GetXaxis()->SetTickSize(0.01);
-		hBdfY->GetXaxis()->SetNdivisions(N_STRIPS);
-		hBdfY->GetXaxis()->SetTitle("Strip");
-		hBdfY->GetXaxis()->CenterTitle();
-		hBdfY->GetXaxis()->SetTickSize(0.01);
-		hBdfY->GetXaxis()->SetTitleSize(0.06);
-		hBdfY->GetXaxis()->SetLabelSize(0.05);
-		hBdfY->GetYaxis()->SetTickSize(0.01);
-		hBdfY->GetYaxis()->SetTitle("Charge (pC)");
-		hBdfY->GetYaxis()->CenterTitle();
-		hBdfY->GetYaxis()->SetTickSize(0.01);
-		hBdfY->GetYaxis()->SetTitleSize(0.06);
-		hBdfY->GetYaxis()->SetLabelSize(0.05);
-		hBdfY->SetBarWidth(0.8);
-		hBdfY->SetBarOffset(0.1);
-		hBdfY->SetStats(0);
-		hBdfY->Draw("b");
-		hBdfY->Write("BdfY");
-		cBDF->SaveAs("Picture/Bruit_de_fond.png");
-		cBDF->Destructor();
+		if(signal_bdf==1)
+			for(int i=0;i<N_STRIPS;i++)
+			{
+				offXY[i][0]=bdfX[i]/count_X;
+				offXY[i][1]=bdfY[i]/count_Y;
+			}
 	}
 
-	if(bkgnd_param==2||bkgnd_param==3)
+	if(bkgnd_param==2)
 		for(int i=0;i<N_STRIPS;i++)
 		{
 			offXY[i][0]=0.;
 			offXY[i][1]=0.;
 		}
 
+	TCanvas *cBDF = new TCanvas("Bruit de fond");
+	cBDF->SetCanvasSize(1000,500);
+	cBDF->Divide(1,2);
+	TH1F *hBdfX = new TH1F("hBdfX","Background for X strips",N_STRIPS,.5,32.5);
+	TH1F *hBdfY = new TH1F("hBdfY","Background for Y strips",N_STRIPS,.5,32.5);
+	for(int i=0;i<N_STRIPS;i++)
+	{
+		// bdfX[i]=offset;
+		// bdfY[i]=offset;
+		bdfX[i]=offXY[i][0];
+		bdfY[i]=offXY[i][1];
+		hBdfX->SetBinContent(i+1,bdfX[i]);
+		hBdfY->SetBinContent(i+1,bdfY[i]);
+		// cout<<bdfX[i]<<" "<<bdfY[i]<<endl;
+	}
+	cBDF->cd(1);
+	hBdfX->SetFillColor(2);
+	hBdfX->GetXaxis()->SetTickSize(0.01);
+	hBdfX->GetXaxis()->SetNdivisions(N_STRIPS);
+	hBdfX->GetXaxis()->SetTitle("Strip");
+	hBdfX->GetXaxis()->CenterTitle();
+	hBdfX->GetXaxis()->SetTickSize(0.01);
+	hBdfX->GetXaxis()->SetTitleSize(0.06);
+	hBdfX->GetXaxis()->SetLabelSize(0.05);
+	hBdfX->GetYaxis()->SetTickSize(0.01);
+	hBdfX->GetYaxis()->SetTitle("Charge (pC)");
+	hBdfX->GetYaxis()->CenterTitle();
+	hBdfX->GetYaxis()->SetTickSize(0.01);
+	hBdfX->GetYaxis()->SetTitleSize(0.06);
+	hBdfX->GetYaxis()->SetLabelSize(0.05);
+	hBdfX->SetBarWidth(0.8);
+	hBdfX->SetBarOffset(0.1);
+	hBdfX->SetStats(0);
+	hBdfX->Draw("b");
+	hBdfX->Write("BdfX");
+	cBDF->cd(2);
+	hBdfY->SetFillColor(4);
+	hBdfY->GetXaxis()->SetTickSize(0.01);
+	hBdfY->GetXaxis()->SetNdivisions(N_STRIPS);
+	hBdfY->GetXaxis()->SetTitle("Strip");
+	hBdfY->GetXaxis()->CenterTitle();
+	hBdfY->GetXaxis()->SetTickSize(0.01);
+	hBdfY->GetXaxis()->SetTitleSize(0.06);
+	hBdfY->GetXaxis()->SetLabelSize(0.05);
+	hBdfY->GetYaxis()->SetTickSize(0.01);
+	hBdfY->GetYaxis()->SetTitle("Charge (pC)");
+	hBdfY->GetYaxis()->CenterTitle();
+	hBdfY->GetYaxis()->SetTickSize(0.01);
+	hBdfY->GetYaxis()->SetTitleSize(0.06);
+	hBdfY->GetYaxis()->SetLabelSize(0.05);
+	hBdfY->SetBarWidth(0.8);
+	hBdfY->SetBarOffset(0.1);
+	hBdfY->SetStats(0);
+	hBdfY->Draw("b");
+	hBdfY->Write("BdfY");
+	cBDF->SaveAs("Picture/Bruit_de_fond.png");
+	cBDF->Destructor();
 }
 
-void SubFittingBackground(double *sum_val)
+void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 {
-	*sum_val=1.;
+	int binl=12;
+	int binr=23;
+	double scale_value;
+	double bdf_SFB;
+	double par[6];
+	double y_min;
+	double y_max;
+
+	TH1F* Profile=new TH1F("Profile","Profile in charge",N_STRIPS,1,33);
+	TH1F* ProfExc=new TH1F("ProfExc","Profile in charge without excluded points",N_STRIPS,1,33);
+	TGraph *TG_Prof=new TGraph();
+	TGraph *TG_Post=new TGraph();
+	TF1* SinProfile=new TF1("SinProfile","TMath::Sin(x)",2,32);
+	TF1* PolNProfile=new TF1("PolNProfile","pol5",2,32);
+	// TF1* PolNProfile=new TF1("PolNProfile",fline,2,32);
+
+	for(int i=0;i<N_STRIPS;i++)
+	{
+		// scale_value=(2.*(PreSBF[i]-min)/(max-min)-1.);
+		scale_value=PreSBF[i];
+		Profile->SetBinContent(i+1,PreSBF[i]);
+		// ProfExc->SetBinContent(i+1,scale_value);
+		if(i<binl||i>binr)
+		{
+			// PolNProfile->RejectPoint(kTRUE);
+			ProfExc->SetBinContent(i+1,scale_value);
+			TG_Prof->SetPoint(i,i+1.5,scale_value);
+			// ProfExc->SetBinError(i+1,0);
+		}
+	}
+	ProfExc->Fit(PolNProfile,"QR");
+
+	par[0]=PolNProfile->GetParameter(0);
+	par[1]=PolNProfile->GetParameter(1);
+	par[2]=PolNProfile->GetParameter(2);
+	par[3]=PolNProfile->GetParameter(3);
+	par[4]=PolNProfile->GetParameter(4);
+	par[5]=PolNProfile->GetParameter(5);
+	
+	for(int i=0;i<N_STRIPS;i++)
+	{
+		double x=i+1.5;
+		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5);
+		PostSBF[i]=PreSBF[i]-bdf_SFB;
+		if(SFBdraw==1)
+			TG_Post->SetPoint(i,x,PostSBF[i]);
+	}
+
+	if(SFBdraw==1)
+	{
+		y_min=Profile->GetMinimum()*1.1;
+		y_max=Profile->GetMaximum()*1.1;
+
+		TCanvas *cSFB = new TCanvas("Sub fitting background");
+		cSFB->SetCanvasSize(1000,750);
+		cSFB->Divide(1,3);
+		cSFB->cd(1);
+		Profile->SetLineColor(2);
+		Profile->GetXaxis()->SetTickSize(0.01);
+		Profile->GetXaxis()->SetNdivisions(N_STRIPS);
+		Profile->GetXaxis()->SetTitle("Strip");
+		Profile->GetXaxis()->CenterTitle();
+		Profile->GetXaxis()->SetTickSize(0.01);
+		Profile->GetXaxis()->SetTitleSize(0.06);
+		Profile->GetXaxis()->SetLabelSize(0.05);
+		Profile->GetYaxis()->SetTickSize(0.01);
+		Profile->GetYaxis()->SetTitle("Charge (pC)");
+		Profile->GetYaxis()->CenterTitle();
+		Profile->GetYaxis()->SetTickSize(0.01);
+		Profile->GetYaxis()->SetTitleSize(0.06);
+		Profile->GetYaxis()->SetLabelSize(0.05);
+		Profile->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
+		Profile->GetYaxis()->SetRangeUser(y_min,y_max);
+		Profile->SetBarWidth(0.8);
+		Profile->SetBarOffset(0.1);
+		Profile->SetStats(0);
+		Profile->Draw();
+		
+		cSFB->cd(2);
+
+		TG_Prof->SetLineColor(2);
+		TG_Prof->SetMarkerColor(2);
+		TG_Prof->SetMarkerStyle(4);
+		TG_Prof->SetMarkerSize(1.2);
+		TG_Prof->GetXaxis()->SetTickSize(0.01);
+		TG_Prof->GetXaxis()->SetNdivisions(N_STRIPS+1);
+		TG_Prof->GetXaxis()->SetTitle("Strip");
+		TG_Prof->GetXaxis()->CenterTitle();
+		TG_Prof->GetXaxis()->SetTickSize(0.01);
+		TG_Prof->GetXaxis()->SetTitleSize(0.06);
+		TG_Prof->GetXaxis()->SetLabelSize(0.05);
+		TG_Prof->GetYaxis()->SetTickSize(0.01);
+		TG_Prof->GetYaxis()->SetTitle("Charge (pC)");
+		TG_Prof->GetYaxis()->CenterTitle();
+		TG_Prof->GetYaxis()->SetTickSize(0.01);
+		TG_Prof->GetYaxis()->SetTitleSize(0.06);
+		TG_Prof->GetYaxis()->SetLabelSize(0.05);
+		TG_Prof->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
+		TG_Prof->GetYaxis()->SetRangeUser(y_min,y_max);
+		TG_Prof->Draw("AP");
+		TG_Prof->Write("TG_Prof");
+
+		PolNProfile->SetLineColor(4);
+		PolNProfile->Draw("same L");
+		// Profile->Fit(SinProfile,"QR");
+		// SinProfile->SetLineColor(4);
+		// SinProfile->Draw("same L");
+
+		cSFB->cd(3);
+		TG_Post->SetLineColor(2);
+		TG_Post->SetMarkerColor(2);
+		TG_Post->SetMarkerStyle(4);
+		TG_Post->SetMarkerSize(1.2);
+		TG_Post->GetXaxis()->SetTickSize(0.01);
+		TG_Post->GetXaxis()->SetNdivisions(N_STRIPS+1);
+		TG_Post->GetXaxis()->SetTitle("Strip");
+		TG_Post->GetXaxis()->CenterTitle();
+		TG_Post->GetXaxis()->SetTickSize(0.01);
+		TG_Post->GetXaxis()->SetTitleSize(0.06);
+		TG_Post->GetXaxis()->SetLabelSize(0.05);
+		TG_Post->GetYaxis()->SetTickSize(0.01);
+		TG_Post->GetYaxis()->SetTitle("Charge (pC)");
+		TG_Post->GetYaxis()->CenterTitle();
+		TG_Post->GetYaxis()->SetTickSize(0.01);
+		TG_Post->GetYaxis()->SetTitleSize(0.06);
+		TG_Post->GetYaxis()->SetLabelSize(0.05);
+		TG_Post->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
+		// TG_Post->GetYaxis()->SetRangeUser(y_min,y_max);
+		TG_Post->Draw("AP");
+		PolNProfile->SetLineColor(4);
+		// PolNProfile->Draw("same L");
+		// TG_Post->Write("TG_Post");
+
+		cSFB->SaveAs("Picture/SBF.png");
+		cSFB->Destructor();
+	}
+
+	Profile->Delete();
+	ProfExc->Delete();
+	SinProfile->Delete();
+	PolNProfile->Delete();
+	TG_Prof->Delete();
+	TG_Post->Delete();
 }
 
 int main(int argc, char** argv)
@@ -760,6 +903,9 @@ int main(int argc, char** argv)
 	faster_file_reader_p reader;
 	faster_data_p data;
 	electrometer_data electro;
+
+	PreSBF.resize(N_STRIPS);
+	PostSBF.resize(N_STRIPS);
 
 	TFile* rootfile=new TFile("Output/PostAnalysis.root","RECREATE");
 	TString name_area;
@@ -795,6 +941,8 @@ int main(int argc, char** argv)
 	double mean_y;
 	double rms_x;
 	double rms_y;
+	double min;
+	double max;
 	double chargeInt;
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
@@ -884,8 +1032,23 @@ int main(int argc, char** argv)
 	count_area=0;
 	chargeInt=0.;
 	t0=-1; 
+
+	for(int j=0;j<N_STRIPS;j++)
+	{
+		bdfX[j]=offXY[j][0];
+		bdfY[j]=offXY[j][1];
+	}
+
+	int i_tmp=0;
+	// do
+	// {
+	// 	data=faster_file_reader_next(reader);
+	// 	i_tmp++;
+	// }while(i_tmp<100);
+	// while((data=faster_file_reader_next(reader))!=NULL&&i_tmp<2) 
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
+		i_tmp++;
 		label=faster_data_label(data);
 		if(label==LabelCount)
 			data_calib=1;
@@ -907,22 +1070,47 @@ int main(int argc, char** argv)
 
 			if(bkgnd_param==3)
 			{
+				PreSBF.clear();
+				PostSBF.clear();
+				min=DBL_MAX;
+				max=0.;
+				for(int j=FIRST_ELEC;j<LAST_ELEC;j++) 
+				{
+					charge=electrometer_channel_charge_pC(electro,j+1);
+					switch(label) 
+					{
+						case LabelX:
+							val=charge-bdfX[j];
+							if(val>max)	max=val;
+							if(val<min)	min=val;
+							PreSBF[j]=val;
+							isLabelX=1;
+						break;
+						case LabelY:
+							val=charge-bdfY[j];
+							if(val>max)	max=val;
+							if(val<min)	min=val;
+							PreSBF[j]=val;
+							isLabelY=1;
+						break;
+					}
+				}
 				sum_val=0.;
-				SubFittingBackground(&sum_val);
+				SubFittingBackground(0,min,max,&sum_val);
 				switch(label)
 				{
 					case LabelX:
 						if(area_end==0)
 							chargeTot_signal_X+=sum_val;
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
-							ChX->SetAt(val,j);
+							ChX->SetAt(PostSBF[j],j); 
 						isLabelX=1;
 					break;
 					case LabelY:
 						if(area_end==0)
 							chargeTot_signal_Y+=sum_val;
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
-							ChY->SetAt(val,j);
+							ChY->SetAt(PostSBF[j],j);
 						isLabelY=1;
 					break;
 				}
@@ -1019,7 +1207,7 @@ int main(int argc, char** argv)
 				isLabelY=0;
 			}
 			// cout<<fasterTime<<" "<<" "<<t1<<" "<<integralTime<<" "<<SamplingTime<<endl;
-			if(area_end==1)
+			if(area_end==1&&tot_area>0)
 			{
 				name_area="TH2_Area_";
 				name_area+=(count_area+1);
@@ -1329,7 +1517,7 @@ int main(int argc, char** argv)
 		cout<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
 		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 
-	cout<<"Charge totale "<<chargeTot_pC<<" charge partielle "<<chargeOverT<<" charge signal X"<<chargeTot_signal_X<<" charge signal Y"<<chargeTot_signal_Y<<endl;
+	cout<<"Charge totale "<<chargeTot_pC<<" charge partielle "<<chargeOverT<<" charge signal X "<<chargeTot_signal_X<<" charge signal Y "<<chargeTot_signal_Y<<endl;
 	// cout<<nIntegration<<endl;
 
 	double FullTablePosition[N_STRIPS]; 											// table of possible position of the beam
