@@ -47,9 +47,10 @@
 std::vector<string> Variable_init;
 std::vector<double> Value_init;
 
-std::vector<double> PreSBF;
-std::vector<double> PostSBF;
+std::vector<double> PreSFB;
+std::vector<double> PostSFB;
 
+string data_folder;
 string data_faster_file;
 string data_audio_file;
 int bkgnd_param=0;
@@ -72,6 +73,10 @@ const int LabelHVn=101;
 
 int Strip_label;
 int Strip_number;
+int borne_m_x=16;
+int borne_M_x=17;
+int borne_m_y=16;
+int borne_M_y=17;
 
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;

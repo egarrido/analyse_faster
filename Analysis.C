@@ -7,6 +7,8 @@ void EntryParameters(int config_simu)
 	stringstream ss;
 	ss<<config_simu;
 	string indice=ss.str();
+	stringstream ss2;
+	int n;
 
 	int iint;
 	int ichar;
@@ -30,6 +32,12 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	3
 	Variable_init.push_back("Time sampling (s)");
 	Value_init.push_back(0.);	//	4
+	Variable_init.push_back("Exclusion strips X"); // 5
+	Value_init.push_back(0.);	//	5
+	Value_init.push_back(0.);	//	6
+	Variable_init.push_back("Exclusion strips Y"); // 6
+	Value_init.push_back(0.);	//	7
+	Value_init.push_back(0.);	//	8
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -92,7 +100,7 @@ void EntryParameters(int config_simu)
 					if(ind_value==3)
 						if(!buffer.compare("proton")||!buffer.compare("Proton")||!buffer.compare("p"))
 							Value_init[ind_value]=calib_data[2];
-					if(ind_value>3)
+					if(ind_value==4)
 					{
 						value=(double)atof(buffer.c_str());
 						if(value==Value_init[ind_value])
@@ -100,6 +108,24 @@ void EntryParameters(int config_simu)
 						else	
 							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"; new value: "<<value<<endl;
 						Value_init[ind_value]=value;
+					}
+					if(ind_value==5)
+					{
+						ss2<<buffer;
+						ss2>>n;
+						borne_m_x=n;
+						ss2>>n;
+						borne_M_x=n;
+						ss2.clear();
+					}
+					if(ind_value==6)
+					{
+						ss2<<buffer;
+						ss2>>n;
+						borne_m_y=n;
+						ss2>>n;
+						borne_M_y=n;
+						ss2.clear();
 					}
 				}	
 				else
@@ -111,6 +137,7 @@ void EntryParameters(int config_simu)
 	}	
 
 	data_faster_file="../DATA/gaussian_0001.fast";
+	data_folder=data_file;
 	filename=path_file+data_file; 
 	ifstream datafile_faster(filename.c_str());
 	if(!datafile_faster)
@@ -121,6 +148,19 @@ void EntryParameters(int config_simu)
 	else
 		data_faster_file=filename;
 	datafile_faster.close();
+
+	if(borne_m_x>borne_M_x||borne_m_x<0||borne_m_x>32||borne_M_x<0||borne_M_x>32)
+	{
+		cout<<"Error with strips exclusion for X, "<<borne_m_x<<" - "<<borne_M_x<<" default values used"<<endl;
+		borne_m_x=16;
+		borne_M_x=17;
+	}
+	if(borne_m_y>borne_M_y||borne_m_y<0||borne_m_y>32||borne_M_y<0||borne_M_y>32)
+	{
+		cout<<"Error with strips exclusion for Y, "<<borne_m_y<<" - "<<borne_M_y<<" default values used"<<endl;
+		borne_m_y=16;
+		borne_M_y=17;
+	}
 
 	cout<<endl;
 	cout<<"=================================================="<<endl;
@@ -134,10 +174,16 @@ void EntryParameters(int config_simu)
 	if(Value_init[2]==2)
 		cout<<" No background substraction"<<endl;
 	if(Value_init[2]==3)
+	{
 		cout<<" Background substraction using function"<<endl;
+		cout<<" Exclusion strips for X: "<<borne_m_x<<" - "<<borne_M_x<<endl;
+		cout<<" Exclusion strips for Y: "<<borne_m_y<<" - "<<borne_M_y<<endl;
+	}
 	cout<<" Calibration value: "<<Value_init[3]<<"(fC/part.)"<<endl;
-	for(ivar=4;ivar<Variable_init.size();ivar++)
-		cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+	ivar=4;
+	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+	// for(ivar=4;ivar<Variable_init.size();ivar++)
+	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 	cout<<"=================================================="<<endl;
 	cout<<endl;
 
@@ -307,7 +353,7 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 	double yl2,yl1,yr1,yr2,h;
 	double dyl2,dyl1,dyr1,dyr2;
 	double test_signal;
-	double seuilD=100.;
+	double seuilD=50.;
 	double seuilS=5.E-4;
 	double bdfX[N_STRIPS];
 	double bdfY[N_STRIPS];
@@ -744,10 +790,15 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 	cBDF->Destructor();
 }
 
-void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
+void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,double time,double *sum_val)
 {
-	int binl=12;
-	int binr=23;
+	stringstream ss;
+	ss<<(int)time;
+	string indice=ss.str();
+	string name="Picture/SFB_"+indice+".png";
+
+	// int binl=12;
+	// int binr=23;
 	double scale_value;
 	double bdf_SFB;
 	double par[6];
@@ -756,7 +807,7 @@ void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 
 	TH1F* Profile=new TH1F("Profile","Profile in charge",N_STRIPS,1,33);
 	TH1F* ProfExc=new TH1F("ProfExc","Profile in charge without excluded points",N_STRIPS,1,33);
-	TGraph *TG_Prof=new TGraph();
+	TGraph *TG_Prof_Exc=new TGraph();
 	TGraph *TG_Post=new TGraph();
 	TF1* SinProfile=new TF1("SinProfile","TMath::Sin(x)",2,32);
 	TF1* PolNProfile=new TF1("PolNProfile","pol5",2,32);
@@ -764,15 +815,15 @@ void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 
 	for(int i=0;i<N_STRIPS;i++)
 	{
-		// scale_value=(2.*(PreSBF[i]-min)/(max-min)-1.);
-		scale_value=PreSBF[i];
-		Profile->SetBinContent(i+1,PreSBF[i]);
+		// scale_value=(2.*(PreSFB[i]-min)/(max-min)-1.);
+		scale_value=PreSFB[i];
+		Profile->SetBinContent(i+1,PreSFB[i]);
 		// ProfExc->SetBinContent(i+1,scale_value);
-		if(i<binl||i>binr)
+		if(i+1<=binl||i+1>=binr)
 		{
 			// PolNProfile->RejectPoint(kTRUE);
 			ProfExc->SetBinContent(i+1,scale_value);
-			TG_Prof->SetPoint(i,i+1.5,scale_value);
+			TG_Prof_Exc->SetPoint(i,i+1.5,scale_value);
 			// ProfExc->SetBinError(i+1,0);
 		}
 	}
@@ -785,13 +836,15 @@ void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 	par[4]=PolNProfile->GetParameter(4);
 	par[5]=PolNProfile->GetParameter(5);
 	
+	*sum_val=0.;
 	for(int i=0;i<N_STRIPS;i++)
 	{
 		double x=i+1.5;
 		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5);
-		PostSBF[i]=PreSBF[i]-bdf_SFB;
+		PostSFB[i]=PreSFB[i]-bdf_SFB;
+		*sum_val+=PostSFB[i];
 		if(SFBdraw==1)
-			TG_Post->SetPoint(i,x,PostSBF[i]);
+			TG_Post->SetPoint(i,x,PostSFB[i]);
 	}
 
 	if(SFBdraw==1)
@@ -800,53 +853,34 @@ void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 		y_max=Profile->GetMaximum()*1.1;
 
 		TCanvas *cSFB = new TCanvas("Sub fitting background");
-		cSFB->SetCanvasSize(1000,750);
-		cSFB->Divide(1,3);
-		cSFB->cd(1);
-		Profile->SetLineColor(2);
-		Profile->GetXaxis()->SetTickSize(0.01);
-		Profile->GetXaxis()->SetNdivisions(N_STRIPS);
-		Profile->GetXaxis()->SetTitle("Strip");
-		Profile->GetXaxis()->CenterTitle();
-		Profile->GetXaxis()->SetTickSize(0.01);
-		Profile->GetXaxis()->SetTitleSize(0.06);
-		Profile->GetXaxis()->SetLabelSize(0.05);
-		Profile->GetYaxis()->SetTickSize(0.01);
-		Profile->GetYaxis()->SetTitle("Charge (pC)");
-		Profile->GetYaxis()->CenterTitle();
-		Profile->GetYaxis()->SetTickSize(0.01);
-		Profile->GetYaxis()->SetTitleSize(0.06);
-		Profile->GetYaxis()->SetLabelSize(0.05);
-		Profile->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
-		Profile->GetYaxis()->SetRangeUser(y_min,y_max);
-		Profile->SetBarWidth(0.8);
-		Profile->SetBarOffset(0.1);
-		Profile->SetStats(0);
-		Profile->Draw();
-		
-		cSFB->cd(2);
+		cSFB->SetCanvasSize(1000,500);
+		cSFB->Divide(1,2);
 
-		TG_Prof->SetLineColor(2);
-		TG_Prof->SetMarkerColor(2);
-		TG_Prof->SetMarkerStyle(4);
-		TG_Prof->SetMarkerSize(1.2);
-		TG_Prof->GetXaxis()->SetTickSize(0.01);
-		TG_Prof->GetXaxis()->SetNdivisions(N_STRIPS+1);
-		TG_Prof->GetXaxis()->SetTitle("Strip");
-		TG_Prof->GetXaxis()->CenterTitle();
-		TG_Prof->GetXaxis()->SetTickSize(0.01);
-		TG_Prof->GetXaxis()->SetTitleSize(0.06);
-		TG_Prof->GetXaxis()->SetLabelSize(0.05);
-		TG_Prof->GetYaxis()->SetTickSize(0.01);
-		TG_Prof->GetYaxis()->SetTitle("Charge (pC)");
-		TG_Prof->GetYaxis()->CenterTitle();
-		TG_Prof->GetYaxis()->SetTickSize(0.01);
-		TG_Prof->GetYaxis()->SetTitleSize(0.06);
-		TG_Prof->GetYaxis()->SetLabelSize(0.05);
-		TG_Prof->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
-		TG_Prof->GetYaxis()->SetRangeUser(y_min,y_max);
-		TG_Prof->Draw("AP");
-		TG_Prof->Write("TG_Prof");
+		cSFB->cd(1);
+		TG_Prof_Exc->SetLineColor(2);
+		TG_Prof_Exc->SetMarkerColor(2);
+		TG_Prof_Exc->SetMarkerStyle(4);
+		TG_Prof_Exc->SetMarkerSize(1.2);
+		TG_Prof_Exc->GetXaxis()->SetTickSize(0.01);
+		TG_Prof_Exc->GetXaxis()->SetNdivisions(N_STRIPS+1);
+		TG_Prof_Exc->GetXaxis()->SetTitle("Strip");
+		TG_Prof_Exc->GetXaxis()->CenterTitle();
+		TG_Prof_Exc->GetXaxis()->SetTickSize(0.01);
+		TG_Prof_Exc->GetXaxis()->SetTitleSize(0.06);
+		TG_Prof_Exc->GetXaxis()->SetLabelSize(0.05);
+		TG_Prof_Exc->GetYaxis()->SetTickSize(0.01);
+		TG_Prof_Exc->GetYaxis()->SetTitle("Charge (pC)");
+		TG_Prof_Exc->GetYaxis()->CenterTitle();
+		TG_Prof_Exc->GetYaxis()->SetTickSize(0.01);
+		TG_Prof_Exc->GetYaxis()->SetTitleSize(0.06);
+		TG_Prof_Exc->GetYaxis()->SetLabelSize(0.05);
+		TG_Prof_Exc->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
+		TG_Prof_Exc->GetYaxis()->SetRangeUser(y_min,y_max);
+		TG_Prof_Exc->Draw("AP");
+		Profile->SetLineColor(2);
+		Profile->SetLineWidth(2);
+		Profile->Draw("same");
+		// TG_Prof_Exc->Write("TG_Prof_Exc");
 
 		PolNProfile->SetLineColor(4);
 		PolNProfile->Draw("same L");
@@ -854,7 +888,7 @@ void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 		// SinProfile->SetLineColor(4);
 		// SinProfile->Draw("same L");
 
-		cSFB->cd(3);
+		cSFB->cd(2);
 		TG_Post->SetLineColor(2);
 		TG_Post->SetMarkerColor(2);
 		TG_Post->SetMarkerStyle(4);
@@ -877,9 +911,10 @@ void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 		TG_Post->Draw("AP");
 		PolNProfile->SetLineColor(4);
 		// PolNProfile->Draw("same L");
-		// TG_Post->Write("TG_Post");
+		TG_Post->Write("TG_Post");
 
-		cSFB->SaveAs("Picture/SBF.png");
+		// cSFB->SaveAs("Picture/SFB.png");
+		cSFB->SaveAs(name.c_str());
 		cSFB->Destructor();
 	}
 
@@ -887,7 +922,7 @@ void SubFittingBackground(int SFBdraw,double min,double max,double *sum_val)
 	ProfExc->Delete();
 	SinProfile->Delete();
 	PolNProfile->Delete();
-	TG_Prof->Delete();
+	TG_Prof_Exc->Delete();
 	TG_Post->Delete();
 }
 
@@ -904,8 +939,8 @@ int main(int argc, char** argv)
 	faster_data_p data;
 	electrometer_data electro;
 
-	PreSBF.resize(N_STRIPS);
-	PostSBF.resize(N_STRIPS);
+	PreSFB.resize(N_STRIPS);
+	PostSFB.resize(N_STRIPS);
 
 	TFile* rootfile=new TFile("Output/PostAnalysis.root","RECREATE");
 	TString name_area;
@@ -915,7 +950,7 @@ int main(int argc, char** argv)
 	int npeak;
 	int i_cx;
 	int i_cy;
-	int area_end=0;
+	int in_area=0;
 	int isLabelX=0;
 	int isLabelY=0;
 	int isBoth=0;
@@ -927,14 +962,18 @@ int main(int argc, char** argv)
 	int count_area=0;
 	int bin_up=1000;
 	int voxel;
+	int bool_print=0;
+	int strip_min;
+	int strip_max;
 	double t0;
 	double t1;
 	double fasterTime=0.;
 	double integralTime=0.;
+	double mid_signal;
 	double sum_x=0.;
 	double sum_y=0.;
+	double sum_val=0.;
 	double val;
-	double sum_val;
 	double charge;
 	double ampl;
 	double mean_x;
@@ -1045,7 +1084,7 @@ int main(int argc, char** argv)
 	// 	data=faster_file_reader_next(reader);
 	// 	i_tmp++;
 	// }while(i_tmp<100);
-	// while((data=faster_file_reader_next(reader))!=NULL&&i_tmp<2) 
+	// while((data=faster_file_reader_next(reader))!=NULL&&i_tmp<5) 
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
 		i_tmp++;
@@ -1063,15 +1102,21 @@ int main(int argc, char** argv)
 
 			fasterTime=faster_data_clock_sec(data)-t0;
 			integralTime=fasterTime-t1;
+			if(in_area==0&&fasterTime<signal_time[0][0])
+				in_area=2;
 			if(fasterTime>signal_time[count_area][0]&&fasterTime<signal_time[count_area][1])
-				area_end=0;
-			if(area_end==0&&fasterTime>signal_time[count_area][1])
-				area_end=1;
+				in_area=0;
+			if(in_area==0&&fasterTime>signal_time[count_area][1])
+				in_area=1;
+
+			mid_signal=signal_time[count_area][0]+(signal_time[count_area][1]-signal_time[count_area][0])/2.;
+			if(count_area>=tot_area)
+				mid_signal==DBL_MAX;
 
 			if(bkgnd_param==3)
 			{
-				PreSBF.clear();
-				PostSBF.clear();
+				PreSFB.clear();
+				PostSFB.clear();
 				min=DBL_MAX;
 				max=0.;
 				for(int j=FIRST_ELEC;j<LAST_ELEC;j++) 
@@ -1083,34 +1128,44 @@ int main(int argc, char** argv)
 							val=charge-bdfX[j];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
-							PreSBF[j]=val;
+							PreSFB[j]=val;
 							isLabelX=1;
+							strip_min=borne_m_x;
+							strip_max=borne_M_x;
 						break;
 						case LabelY:
 							val=charge-bdfY[j];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
-							PreSBF[j]=val;
+							PreSFB[j]=val;
 							isLabelY=1;
+							strip_min=borne_m_y;
+							strip_max=borne_M_y;
 						break;
 					}
 				}
-				sum_val=0.;
-				SubFittingBackground(0,min,max,&sum_val);
+
+				if((fasterTime<mid_signal&&bool_print==0)||fasterTime>mid_signal)
+					bool_print=0;
+				else
+					bool_print=1;
+				SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
+				// SubFittingBackground(1,min,max,fasterTime,&sum_val);
+
 				switch(label)
 				{
 					case LabelX:
-						if(area_end==0)
+						if(in_area==0)
 							chargeTot_signal_X+=sum_val;
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
-							ChX->SetAt(PostSBF[j],j); 
+							ChX->SetAt(PostSFB[j],j); 
 						isLabelX=1;
 					break;
 					case LabelY:
-						if(area_end==0)
+						if(in_area==0)
 							chargeTot_signal_Y+=sum_val;
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
-							ChY->SetAt(PostSBF[j],j);
+							ChY->SetAt(PostSFB[j],j);
 						isLabelY=1;
 					break;
 				}
@@ -1125,7 +1180,7 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-bdfX[j];
-							if(area_end==0)
+							if(in_area==0)
 								chargeTot_signal_X+=val;
 							// val=TMath::Max(charge-bdfX[j],0.);
 							if(val<bdfX[j]*factor_bdf)
@@ -1136,8 +1191,8 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-bdfY[j];
-							if(area_end==0)
-								chargeTot_signal_Y=val;
+							if(in_area==0)
+								chargeTot_signal_Y+=val;
 							// val=TMath::Max(charge-bdfY[j],0.);
 							if(val<bdfY[j]*factor_bdf)
 								val=0.; 
@@ -1162,7 +1217,7 @@ int main(int argc, char** argv)
 					val=ChY->GetAt(j)+SamplY->GetAt(j);
 					SamplY->SetAt(val,j);
 					
-					if(area_end==0)
+					if(in_area==0)
 					{
 						val=ChX->GetAt(j)+AreaX->GetAt(j);
 						AreaX->SetAt(val,j);
@@ -1177,7 +1232,7 @@ int main(int argc, char** argv)
 				vect_time_tot[count_tot]=fasterTime;
 				vect_charge_clean[count_tot]=(sum_x+sum_y)/2.;
 				chargeTot_pC+=(sum_x+sum_y)/2.;
-				// if(area_end==0)
+				// if(in_area==0)
 				// 	chargeTot_signal+=(sum_x+sum_y)/2.;
 					// chargeTot_signal+=sum_y;
 				count_tot++;
@@ -1207,7 +1262,7 @@ int main(int argc, char** argv)
 				isLabelY=0;
 			}
 			// cout<<fasterTime<<" "<<" "<<t1<<" "<<integralTime<<" "<<SamplingTime<<endl;
-			if(area_end==1&&tot_area>0)
+			if(in_area==1&&tot_area>0)
 			{
 				name_area="TH2_Area_";
 				name_area+=(count_area+1);
@@ -1400,7 +1455,7 @@ int main(int argc, char** argv)
 
 				AreaX->Reset();
 				AreaY->Reset();
-				area_end=2;
+				in_area=2;
 				count_area++;
 			}
 
@@ -1409,7 +1464,8 @@ int main(int argc, char** argv)
 			{
 				if(nbSummedSample>=MAX_SMPL)
 					cout<<"Maximum number of samples reached"<<endl;
-				else
+				else if(in_area==0&&tot_area>0)
+				// else
 				{
 					TH1F* Profil_x_smpl=new TH1F("Profil_x_area","X profile in number of particles",N_STRIPS,1,33);
 					TH1F* Profil_y_smpl=new TH1F("Profil_y_area","Y profile in number of particles",N_STRIPS,1,33);
@@ -1517,7 +1573,7 @@ int main(int argc, char** argv)
 		cout<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
 		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 
-	cout<<"Charge totale "<<chargeTot_pC<<" charge partielle "<<chargeOverT<<" charge signal X "<<chargeTot_signal_X<<" charge signal Y "<<chargeTot_signal_Y<<endl;
+	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge partielle : "<<chargeOverT<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
 	// cout<<nIntegration<<endl;
 
 	double FullTablePosition[N_STRIPS]; 											// table of possible position of the beam
@@ -1796,4 +1852,14 @@ int main(int argc, char** argv)
 	faster_file_reader_close(reader);
 	free(filename);
 	rootfile->Close();
+
+	char Execution[80];
+	sprintf(Execution,"rm -f -r %s",data_folder.c_str());
+	system(Execution);
+	sprintf(Execution,"mkdir %s",data_folder.c_str());
+	system(Execution);
+	sprintf(Execution,"cp Picture/*.png %s/",data_folder.c_str());
+	system(Execution);
+	sprintf(Execution,"cp Output/PostAnalysis.root %s/",data_folder.c_str());
+	system(Execution);
 }
