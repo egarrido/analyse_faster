@@ -137,7 +137,6 @@ void EntryParameters(int config_simu)
 	}	
 
 	data_faster_file="../DATA/gaussian_0001.fast";
-	data_folder=data_file;
 	filename=path_file+data_file; 
 	ifstream datafile_faster(filename.c_str());
 	if(!datafile_faster)
@@ -189,6 +188,10 @@ void EntryParameters(int config_simu)
 
 	bkgnd_param=Value_init[2];
 	SamplingTime=Value_init[4];
+	if(bkgnd_param==3)
+		data_folder="Output/"+data_file+".function";
+	else
+		data_folder="Output/"+data_file;
 }
 
 double Extremum(double a,double b,double c,double d,double e)
