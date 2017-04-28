@@ -42,6 +42,7 @@
 #include "fasterac/electrometer.h"
 #include "fasterac/scaler.h"
 
+#include "Seuil_data.h"
 #include "Calibrage_data.h"
 
 std::vector<string> Variable_init;

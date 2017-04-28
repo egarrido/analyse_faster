@@ -338,7 +338,7 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 	free(vect_dquanta);
 }
 
-void Scaler(char *file,double decimation,int tot_area,double signal_time[][2])
+void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[])
 {
 	faster_file_reader_p reader;
 	faster_data_p data;
@@ -346,11 +346,14 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2])
 	reader=faster_file_reader_open(file);
 	TString name_qth2th;
 	int label;
+	int j;
 	int current_area=0;
 	int in_area=-1;
 	double t0;
 	double fasterTime;
 	double Qth2th;
+	long int quanta=0;
+	double calib_factor;
 
 	TH1F *hQth2th = new TH1F("hQth2th","Charge threshold to threshold",1000,0.,14000);
 
@@ -370,6 +373,12 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2])
 				in_area=0;
 				Qth2th=scaler_meas.qtt;
 				hQth2th->Fill(Qth2th);
+				j=MAX_QNT-1;
+				while(Seuil_quanta[current_area][j]>Qth2th&&j>0)
+					j--;
+				// if((double)rand()/RAND_MAX>0.99)
+				// 	cout<<" "<<j<<" "<<Seuil_quanta[current_area][j]<<" "<<Qth2th<<endl;
+				quanta+=j+1;
 			}
 			else
 				if(in_area==0&&fasterTime>signal_time[current_area][1])
@@ -381,6 +390,7 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2])
 				name_qth2th+=(current_area+1);
 				TCanvas *cQth2th= new TCanvas(name_qth2th);
 				cQth2th->SetCanvasSize(1000,800);
+				cQth2th->SetLogy();
 
 				hQth2th->SetTitle("Charge threshold to threshold");
 				hQth2th->SetTitleSize(0.0);
@@ -399,10 +409,16 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2])
 				name_qth2th="Picture/Qth2th_";
 				name_qth2th+=(current_area+1);
 				name_qth2th+=".png";
+				hQth2th->Write(name_qth2th);
 				cQth2th->SaveAs(name_qth2th);
-				current_area+=1;
 				hQth2th->Reset();
 				cQth2th->Destructor();
+				
+				calib_factor=vect_charge_t[current_area]/quanta*decimation;
+				cout<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+
+				current_area+=1;
+				quanta=0;
 			}
 		}
 	}
@@ -2058,7 +2074,7 @@ int main(int argc, char** argv)
 	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
 	for(int i=0;i<tot_area;i++)
 		cout<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
-		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
+		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Carge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 
 	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge partielle : "<<chargeOverT<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
 	// cout<<nIntegration<<endl;
@@ -2337,7 +2353,7 @@ int main(int argc, char** argv)
 
 	if(data_meas==1&&tot_area>1)
 		// Calibrage(filename,chargeTot_pC);
-		Scaler(filename,1./100.,tot_area,signal_time);
+		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area);
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
 
