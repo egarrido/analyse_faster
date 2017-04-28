@@ -53,7 +53,6 @@ std::vector<double> PostSFB;
 string data_folder;
 string data_faster_file;
 string data_audio_file;
-int bkgnd_param=0;
 
 const int N_box_per_irradation_max=5000;
 const int N_STRIPS=32;
@@ -66,11 +65,13 @@ const int MAX_INTEGR=1000000;
 // Manip Mai 2014 : X->4 Y->6 Scaler->1009
 const int LabelX=4;
 const int LabelY=6;
-const int LabelCount=1009;
-const int LabelScaler=9;
+const int LabelScaler=7;
+const int LabelCount=1007;
 const int LabelHVp=102;
 const int LabelHVn=101;
 
+int bkgnd_param=0;
+int area_find_param=0;
 int Strip_label;
 int Strip_number;
 int borne_m_x=16;

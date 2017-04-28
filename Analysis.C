@@ -34,10 +34,10 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	4
 	Variable_init.push_back("Exclusion strips X"); // 5
 	Value_init.push_back(0.);	//	5
-	Value_init.push_back(0.);	//	6
 	Variable_init.push_back("Exclusion strips Y"); // 6
+	Value_init.push_back(0.);	//	6
+	Variable_init.push_back("Irradiation area finding way (charge/derivative)"); // 7
 	Value_init.push_back(0.);	//	7
-	Value_init.push_back(0.);	//	8
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -127,6 +127,13 @@ void EntryParameters(int config_simu)
 						borne_M_y=n;
 						ss2.clear();
 					}
+					if(ind_value==7)
+					{
+						if(!buffer.compare("derivative"))
+							Value_init[ind_value]=0;
+						if(!buffer.compare("charge"))
+							Value_init[ind_value]=1;
+					}
 				}	
 				else
 					cout<<"Value not define for "<<variable<<". Keeping the default one: "<<Value_init[ind_value]<<". Maybe check the entry file."<<endl;
@@ -153,12 +160,14 @@ void EntryParameters(int config_simu)
 		cout<<"Error with strips exclusion for X, "<<borne_m_x<<" - "<<borne_M_x<<" default values used"<<endl;
 		borne_m_x=16;
 		borne_M_x=17;
+		Value_init[5]=borne_M_x-borne_m_x-1;
 	}
 	if(borne_m_y>borne_M_y||borne_m_y<0||borne_m_y>32||borne_M_y<0||borne_M_y>32)
 	{
 		cout<<"Error with strips exclusion for Y, "<<borne_m_y<<" - "<<borne_M_y<<" default values used"<<endl;
 		borne_m_y=16;
 		borne_M_y=17;
+		Value_init[6]=borne_M_y-borne_m_y-1;
 	}
 
 	cout<<endl;
@@ -166,27 +175,37 @@ void EntryParameters(int config_simu)
 	cout<<" Parameters for the initialisation; config: "<<config_simu<<endl;
 	cout<<"--------------------------------------------------"<<endl;
 	cout<<" File of data: "<<data_faster_file<<endl;
-	if(Value_init[2]==0)
+	ivar=2;
+	if(Value_init[ivar]==0)
 		cout<<" No background extraction, default values used"<<endl;
-	if(Value_init[2]==1)
+	if(Value_init[ivar]==1)
 		cout<<" Background extraction"<<endl;
-	if(Value_init[2]==2)
+	if(Value_init[ivar]==2)
 		cout<<" No background substraction"<<endl;
-	if(Value_init[2]==3)
+	if(Value_init[ivar]==3)
 	{
 		cout<<" Background substraction using function"<<endl;
 		cout<<" Exclusion strips for X: "<<borne_m_x<<" - "<<borne_M_x<<endl;
 		cout<<" Exclusion strips for Y: "<<borne_m_y<<" - "<<borne_M_y<<endl;
 	}
-	cout<<" Calibration value: "<<Value_init[3]<<"(fC/part.)"<<endl;
+	bkgnd_param=Value_init[ivar];
+	
+	ivar=3;
+	cout<<" Calibration value: "<<Value_init[ivar]<<"(fC/part.)"<<endl;
 	ivar=4;
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+	ivar=7;
+	if(Value_init[ivar]==0)
+		cout<<" Derivative charge method used"<<endl;
+	if(Value_init[ivar]==1)
+		cout<<" Charge method used"<<endl;
+	area_find_param=Value_init[ivar];
+	
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
 	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 	cout<<"=================================================="<<endl;
 	cout<<endl;
 
-	bkgnd_param=Value_init[2];
 	SamplingTime=Value_init[4];
 	if(bkgnd_param==3)
 		data_folder="Output/"+data_file+".function";
@@ -213,7 +232,6 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 {
 	faster_file_reader_p reader;
 	faster_data_p data;
-	electrometer_data electro;
 	scaler_counter scaler_cnt;
 	reader=faster_file_reader_open(file);
 	int label;
@@ -320,7 +338,78 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 	free(vect_dquanta);
 }
 
-void SignalArea(char *file,int *tot_area,double signal_time[][2])
+void Scaler(char *file,double decimation,int tot_area,double signal_time[][2])
+{
+	faster_file_reader_p reader;
+	faster_data_p data;
+	scaler_measurement scaler_meas;
+	reader=faster_file_reader_open(file);
+	TString name_qth2th;
+	int label;
+	int current_area=0;
+	int in_area=-1;
+	double t0;
+	double fasterTime;
+	double Qth2th;
+
+	TH1F *hQth2th = new TH1F("hQth2th","Charge threshold to threshold",1000,0.,14000);
+
+	t0=-1;
+	// while((data=faster_file_reader_next(reader))!=NULL) 
+	while((data=faster_file_reader_next(reader))!=NULL&&current_area<tot_area) 
+	{
+		label=faster_data_label(data);
+		if(label==LabelScaler)
+		{
+			faster_data_load(data,&scaler_meas);
+			if(t0==-1)
+				t0=faster_data_clock_sec(data);
+			fasterTime=faster_data_clock_sec(data)-t0;
+			if(fasterTime>signal_time[current_area][0]&&fasterTime<signal_time[current_area][1])
+			{
+				in_area=0;
+				Qth2th=scaler_meas.qtt;
+				hQth2th->Fill(Qth2th);
+			}
+			else
+				if(in_area==0&&fasterTime>signal_time[current_area][1])
+					in_area=1;
+			if(in_area==1)
+			{
+				in_area=1;
+				name_qth2th="TH1_Qth2th_";
+				name_qth2th+=(current_area+1);
+				TCanvas *cQth2th= new TCanvas(name_qth2th);
+				cQth2th->SetCanvasSize(1000,800);
+
+				hQth2th->SetTitle("Charge threshold to threshold");
+				hQth2th->SetTitleSize(0.0);
+				hQth2th->SetStats(0);
+				hQth2th->GetXaxis()->SetTitle("Charge");
+				hQth2th->GetXaxis()->SetTickSize(0.01);
+				hQth2th->GetXaxis()->SetTitleSize(0.036);
+				hQth2th->GetXaxis()->CenterTitle();
+				hQth2th->GetXaxis()->SetLabelSize(0.02);
+				hQth2th->GetYaxis()->SetTitle("Count (u.a)");
+				hQth2th->GetYaxis()->SetTickSize(0.01);
+				hQth2th->GetYaxis()->SetTitleSize(0.036);
+				hQth2th->GetYaxis()->CenterTitle();
+				hQth2th->GetYaxis()->SetLabelSize(0.02);
+				hQth2th->Draw();
+				name_qth2th="Picture/Qth2th_";
+				name_qth2th+=(current_area+1);
+				name_qth2th+=".png";
+				cQth2th->SaveAs(name_qth2th);
+				current_area+=1;
+				hQth2th->Reset();
+				cQth2th->Destructor();
+			}
+		}
+	}
+	faster_file_reader_close(reader);
+}
+
+void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 {
 	faster_file_reader_p reader;
 	faster_data_p data;
@@ -341,7 +430,7 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 	int count_moy=0;
 	int nb_1sec=0;
 	int last_i=0;
-	int integration=100;
+	int integration=50;
 	double t0;
 	double fasterTime;
 	double first_signal;
@@ -793,6 +882,362 @@ void SignalArea(char *file,int *tot_area,double signal_time[][2])
 	cBDF->Destructor();
 }
 
+void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
+{
+	faster_file_reader_p reader;
+	faster_data_p data;
+	electrometer_data electro;
+	reader=faster_file_reader_open(file);
+	int label;
+	int mvt;
+	const int asc=0;
+	const int des=1;
+	int beg_on=0;
+	int end_on=0;
+	int isLabelX;
+	int isLabelY;
+	int count_Y=0;
+	int count_X=0;
+	int count_tot=0;
+	int count_int=0;
+	int nb_1sec=0;
+	int last_i=0;
+	int integration=50;
+	double t0;
+	double fasterTime;
+	double first_signal;
+	double last_signal;
+	double charge;
+	double chargeTot_pC=0.;
+	double charge_X=0.;
+	double charge_X_int=0.;
+	double charge_Y=0.;
+	double charge_Y_int=0.;
+	double yl2,yl1,yr1,yr2,h;
+	double dyl2,dyl1,dyr1,dyr2;
+	double test_signal;
+	double seuilC=40200.;
+	double seuilS=5.E-4;
+	double bdfX[N_STRIPS];
+	double bdfY[N_STRIPS];
+
+	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_charge=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_time_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_charge_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_dcharge_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+
+	t0=-1;
+	while((data=faster_file_reader_next(reader))!=NULL) 
+	{
+		label=faster_data_label(data);
+		if(label==LabelX||label==LabelY)
+		{
+			if(t0==-1)
+				t0=faster_data_clock_sec(data);
+			faster_data_load(data,&electro);
+			fasterTime=faster_data_clock_sec(data)-t0;
+			for(int j=0;j<N_STRIPS;j++) 
+			{
+				charge=electrometer_channel_charge_pC(electro,j+1);
+				switch(label) 
+				{
+					case LabelX:
+						charge_X+=charge;
+						isLabelX=1;
+					break;
+					case LabelY:
+						charge_Y+=charge;
+						isLabelY=1;
+					break;
+				}
+			}
+			if(isLabelX==1&&isLabelY==1)
+			{
+				chargeTot_pC+=(charge_X+charge_Y)/2.;
+				charge_X_int+=charge_X;
+				charge_Y_int+=charge_Y;
+				vect_charge[count_tot]=(charge_X+charge_Y)/2.;
+				// vect_charge[count_tot]=charge_X;
+				vect_time[count_tot]=fasterTime;
+				charge_X=0.;
+				charge_Y=0.;
+				if(count_tot%integration==(integration-1))
+				{
+					vect_charge_int[count_int]=(charge_X_int+charge_Y_int)/2.;
+					vect_time_int[count_int]=fasterTime;
+					charge_X_int=0.;
+					charge_Y_int=0.;
+					count_int++;
+				}
+				count_tot++;
+				isLabelX=0;
+				isLabelY=0;
+			}
+		}
+	}
+	count_int--;
+	count_tot--;
+	faster_file_reader_close(reader);
+
+	mvt=asc;
+	first_signal=-1.;
+	*tot_area=0;
+	h=vect_time_int[1]-vect_time_int[0];
+	nb_1sec=1+(int)1./h;
+	for(int i=2;i<count_int-1;i++)
+	{
+		if(i<2)
+		{	
+			yl2=0.;
+			yl1=0.;
+			if(i>=1)
+				yl1=vect_charge_int[i-1];
+		}
+		else
+		{
+			yl2=vect_charge_int[i-2];
+			yl1=vect_charge_int[i-1];
+		}
+		if(i>count_int-2)
+		{	
+			yr2=0.;
+			yr1=0.;
+			if(i<=count_int-1)
+				yr1=vect_charge_int[i+1];
+		}
+		else
+		{
+			yr2=vect_charge_int[i+2];
+			yr1=vect_charge_int[i+1];
+		}
+		vect_dcharge_int[i]=(8.*(yr1-yl1)-yr2+yl2)/(12.*h);
+
+		if(vect_charge_int[i]>seuilC&&mvt==asc)
+		{
+			cout<<"Début du signal à "<<vect_time_int[i]<<endl;
+			if(*tot_area==0)
+				first_signal=vect_time_int[i];
+			if(i>=nb_1sec)
+				signal_time[*tot_area][0]=vect_time_int[i-nb_1sec];
+			else
+				signal_time[*tot_area][0]=vect_time_int[0];
+			last_i=i;
+			// i+=nb_1sec;
+			mvt=des;
+		}
+		if(vect_charge_int[i]<seuilC&&mvt==des)
+		{
+			cout<<"Fin du signal à "<<vect_time_int[i]<<endl;
+			last_signal=vect_time_int[i];
+			signal_time[*tot_area][1]=vect_time_int[i];
+			if(i<count_int-nb_1sec)
+				signal_time[*tot_area][1]=vect_time_int[i+nb_1sec];
+			else
+				signal_time[*tot_area][1]=vect_time_int[count_int-1];
+			mvt=asc;
+			last_i=i;
+			// i+=nb_1sec;
+			*tot_area=*tot_area+1;
+			signal_time[*tot_area][0]=signal_time[*tot_area-1][1]; //valeur refuge pour les double descentes
+			mvt=asc;
+		}
+	}
+
+	if(first_signal<2.&&*tot_area>0)
+	{
+		cout<<"Attention, il semblerait que le fichier débute sur du signal On, premier signal à : "<<first_signal<<endl;
+		signal_time[0][0]=vect_time_int[0];
+		first_signal=vect_time_int[0];
+		beg_on=1;
+	}
+
+	TCanvas *cCharge= new TCanvas("Charge over time");
+	cCharge->SetCanvasSize(1000,750);
+	cCharge->Divide(1,3);
+
+	cCharge->cd(1);
+	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
+	TG_Charge->SetMarkerColor(2);
+	TG_Charge->SetLineColor(2);
+	TG_Charge->SetLineWidth(1.5);
+	TG_Charge->SetTitle("Charge total over time");
+	TG_Charge->GetXaxis()->SetTitle("Time (s)");
+	TG_Charge->GetXaxis()->SetTickSize(0.01);
+	TG_Charge->GetXaxis()->SetTitleSize(0.06);
+	TG_Charge->GetXaxis()->SetLabelSize(0.05);
+	TG_Charge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge->GetYaxis()->SetTickSize(0.01);
+	TG_Charge->GetYaxis()->SetTitleSize(0.06);
+	TG_Charge->GetYaxis()->CenterTitle();
+	TG_Charge->GetYaxis()->SetLabelSize(0.05);
+	TG_Charge->Write("Charge");
+	TG_Charge->Draw("AL");
+
+	cCharge->cd(2);
+	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
+	TG_Charge_int->SetMarkerColor(2);
+	TG_Charge_int->SetLineColor(2);
+	TG_Charge_int->SetLineWidth(1.5);
+	TG_Charge_int->SetTitle("Charge over time");
+	TG_Charge_int->GetXaxis()->SetTitle("Time (s)");
+	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
+	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
+	TG_Charge_int->GetXaxis()->SetLabelSize(0.05);
+	TG_Charge_int->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge_int->GetYaxis()->SetTickSize(0.01);
+	TG_Charge_int->GetYaxis()->SetTitleSize(0.06);
+	TG_Charge_int->GetYaxis()->CenterTitle();
+	TG_Charge_int->GetYaxis()->SetLabelSize(0.05);
+	TG_Charge_int->Write("Charge int");
+	TG_Charge_int->Draw("AL");
+
+	cCharge->cd(3);
+	TGraph *TG_dCharge=new TGraph(count_int,vect_time_int,vect_dcharge_int);
+	TG_dCharge->SetMarkerColor(4);
+	TG_dCharge->SetLineColor(4);
+	TG_dCharge->SetLineWidth(1.5);
+	TG_dCharge->SetTitle("Charge derivative over time");
+	TG_dCharge->GetXaxis()->SetTitle("Time (s)");
+	TG_dCharge->GetXaxis()->SetTickSize(0.01);
+	TG_dCharge->GetXaxis()->SetTitleSize(0.06);
+	TG_dCharge->GetXaxis()->SetLabelSize(0.05);
+	TG_dCharge->GetYaxis()->SetTitle("Derivative");
+	TG_dCharge->GetYaxis()->SetTickSize(0.01);
+	TG_dCharge->GetYaxis()->SetTitleSize(0.06);
+	TG_dCharge->GetYaxis()->CenterTitle();
+	TG_dCharge->GetYaxis()->SetLabelSize(0.05);
+	TG_dCharge->Write("DCharge");
+	TG_dCharge->Draw("AL");
+
+	cCharge->SaveAs("Picture/Charge.png");
+
+	TG_Charge->Delete();
+	TG_Charge_int->Delete();
+	TG_dCharge->Delete();
+	cCharge->Destructor();
+	free(vect_time);
+	free(vect_charge);
+	free(vect_time_int);
+	free(vect_charge_int);
+	free(vect_dcharge_int);
+
+	int k=0;
+	int signal_bdf=0;
+
+	if(bkgnd_param==1||bkgnd_param==3)
+	{
+		for(int i=0;i<N_STRIPS;i++)
+		{
+			bdfX[i]=0.;
+			bdfY[i]=0.;
+		}
+		reader=faster_file_reader_open(file);
+		while((data=faster_file_reader_next(reader))!=NULL) 
+		{
+			label=faster_data_label(data);
+			if(label==LabelX||label==LabelY)
+			{
+				faster_data_load(data,&electro);
+				fasterTime=faster_data_clock_sec(data)-t0;
+				if((fasterTime<(first_signal-1.)&&beg_on==0)||(fasterTime>(last_signal+1.)&&end_on==0))
+				{
+					signal_bdf=1;
+					for(int j=0;j<N_STRIPS;j++) 
+					{
+						charge=electrometer_channel_charge_pC(electro,j+1);
+						switch(label) 
+						{
+							case LabelX:
+								bdfX[j]+=charge;
+								if(j==0)
+									count_X++;
+							break;
+							case LabelY:
+								bdfY[j]+=charge;
+								if(j==0)
+									count_Y++;
+							break;
+						}
+					}
+				}
+			}
+		}
+		faster_file_reader_close(reader);
+		if(signal_bdf==1)
+			for(int i=0;i<N_STRIPS;i++)
+			{
+				offXY[i][0]=bdfX[i]/count_X;
+				offXY[i][1]=bdfY[i]/count_Y;
+			}
+	}
+
+	if(bkgnd_param==2)
+		for(int i=0;i<N_STRIPS;i++)
+		{
+			offXY[i][0]=0.;
+			offXY[i][1]=0.;
+		}
+
+	TCanvas *cBDF = new TCanvas("Bruit de fond");
+	cBDF->SetCanvasSize(1000,500);
+	cBDF->Divide(1,2);
+	TH1F *hBdfX = new TH1F("hBdfX","Background for X strips",N_STRIPS,.5,32.5);
+	TH1F *hBdfY = new TH1F("hBdfY","Background for Y strips",N_STRIPS,.5,32.5);
+	for(int i=0;i<N_STRIPS;i++)
+	{
+		// bdfX[i]=offset;
+		// bdfY[i]=offset;
+		bdfX[i]=offXY[i][0];
+		bdfY[i]=offXY[i][1];
+		hBdfX->SetBinContent(i+1,bdfX[i]);
+		hBdfY->SetBinContent(i+1,bdfY[i]);
+		// cout<<bdfX[i]<<" "<<bdfY[i]<<endl;
+	}
+	cBDF->cd(1);
+	hBdfX->SetFillColor(2);
+	hBdfX->GetXaxis()->SetTickSize(0.01);
+	hBdfX->GetXaxis()->SetNdivisions(N_STRIPS);
+	hBdfX->GetXaxis()->SetTitle("Strip");
+	hBdfX->GetXaxis()->CenterTitle();
+	hBdfX->GetXaxis()->SetTickSize(0.01);
+	hBdfX->GetXaxis()->SetTitleSize(0.06);
+	hBdfX->GetXaxis()->SetLabelSize(0.05);
+	hBdfX->GetYaxis()->SetTickSize(0.01);
+	hBdfX->GetYaxis()->SetTitle("Charge (pC)");
+	hBdfX->GetYaxis()->CenterTitle();
+	hBdfX->GetYaxis()->SetTickSize(0.01);
+	hBdfX->GetYaxis()->SetTitleSize(0.06);
+	hBdfX->GetYaxis()->SetLabelSize(0.05);
+	hBdfX->SetBarWidth(0.8);
+	hBdfX->SetBarOffset(0.1);
+	hBdfX->SetStats(0);
+	hBdfX->Draw("b");
+	hBdfX->Write("BdfX");
+	cBDF->cd(2);
+	hBdfY->SetFillColor(4);
+	hBdfY->GetXaxis()->SetTickSize(0.01);
+	hBdfY->GetXaxis()->SetNdivisions(N_STRIPS);
+	hBdfY->GetXaxis()->SetTitle("Strip");
+	hBdfY->GetXaxis()->CenterTitle();
+	hBdfY->GetXaxis()->SetTickSize(0.01);
+	hBdfY->GetXaxis()->SetTitleSize(0.06);
+	hBdfY->GetXaxis()->SetLabelSize(0.05);
+	hBdfY->GetYaxis()->SetTickSize(0.01);
+	hBdfY->GetYaxis()->SetTitle("Charge (pC)");
+	hBdfY->GetYaxis()->CenterTitle();
+	hBdfY->GetYaxis()->SetTickSize(0.01);
+	hBdfY->GetYaxis()->SetTitleSize(0.06);
+	hBdfY->GetYaxis()->SetLabelSize(0.05);
+	hBdfY->SetBarWidth(0.8);
+	hBdfY->SetBarOffset(0.1);
+	hBdfY->SetStats(0);
+	hBdfY->Draw("b");
+	hBdfY->Write("BdfY");
+	cBDF->SaveAs("Picture/Bruit_de_fond.png");
+	cBDF->Destructor();
+}
+
 void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,double time,double *sum_val)
 {
 	stringstream ss;
@@ -808,8 +1253,9 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	double y_min;
 	double y_max;
 
-	TH1F* Profile=new TH1F("Profile","Profile in charge",N_STRIPS,1,33);
+	TH1F* Profile=new TH1F("Profile","Profile in charge",N_STRIPS,.5,32.5);
 	TH1F* ProfExc=new TH1F("ProfExc","Profile in charge without excluded points",N_STRIPS,1,33);
+	TH1F* Visu=new TH1F("Visu","Profile in charge without excluded points",N_STRIPS,.5,32.5);
 	TGraph *TG_Prof_Exc=new TGraph();
 	TGraph *TG_Post=new TGraph();
 	TF1* SinProfile=new TF1("SinProfile","TMath::Sin(x)",2,32);
@@ -826,7 +1272,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		{
 			// PolNProfile->RejectPoint(kTRUE);
 			ProfExc->SetBinContent(i+1,scale_value);
-			TG_Prof_Exc->SetPoint(i,i+1.5,scale_value);
+			TG_Prof_Exc->SetPoint(i,i+1,scale_value);
 			// ProfExc->SetBinError(i+1,0);
 		}
 	}
@@ -842,7 +1288,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	*sum_val=0.;
 	for(int i=0;i<N_STRIPS;i++)
 	{
-		double x=i+1.5;
+		double x=i+1;
 		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5);
 		PostSFB[i]=PreSFB[i]-bdf_SFB;
 		*sum_val+=PostSFB[i];
@@ -865,7 +1311,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		TG_Prof_Exc->SetMarkerStyle(4);
 		TG_Prof_Exc->SetMarkerSize(1.2);
 		TG_Prof_Exc->GetXaxis()->SetTickSize(0.01);
-		TG_Prof_Exc->GetXaxis()->SetNdivisions(N_STRIPS+1);
+		TG_Prof_Exc->GetXaxis()->SetNdivisions(N_STRIPS);
 		TG_Prof_Exc->GetXaxis()->SetTitle("Strip");
 		TG_Prof_Exc->GetXaxis()->CenterTitle();
 		TG_Prof_Exc->GetXaxis()->SetTickSize(0.01);
@@ -877,7 +1323,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		TG_Prof_Exc->GetYaxis()->SetTickSize(0.01);
 		TG_Prof_Exc->GetYaxis()->SetTitleSize(0.06);
 		TG_Prof_Exc->GetYaxis()->SetLabelSize(0.05);
-		TG_Prof_Exc->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
+		TG_Prof_Exc->GetXaxis()->SetRangeUser(1,N_STRIPS);
 		TG_Prof_Exc->GetYaxis()->SetRangeUser(y_min,y_max);
 		TG_Prof_Exc->Draw("AP");
 		Profile->SetLineColor(2);
@@ -892,12 +1338,16 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		// SinProfile->Draw("same L");
 
 		cSFB->cd(2);
+		gStyle->SetBarWidth(0.9);
+		gStyle->SetBarOffset(0.1);
 		TG_Post->SetLineColor(2);
+		TG_Post->SetFillColor(2);
+		TG_Post->SetLineWidth(1);
 		TG_Post->SetMarkerColor(2);
 		TG_Post->SetMarkerStyle(4);
 		TG_Post->SetMarkerSize(1.2);
 		TG_Post->GetXaxis()->SetTickSize(0.01);
-		TG_Post->GetXaxis()->SetNdivisions(N_STRIPS+1);
+		TG_Post->GetXaxis()->SetNdivisions(N_STRIPS);
 		TG_Post->GetXaxis()->SetTitle("Strip");
 		TG_Post->GetXaxis()->CenterTitle();
 		TG_Post->GetXaxis()->SetTickSize(0.01);
@@ -909,9 +1359,9 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		TG_Post->GetYaxis()->SetTickSize(0.01);
 		TG_Post->GetYaxis()->SetTitleSize(0.06);
 		TG_Post->GetYaxis()->SetLabelSize(0.05);
-		TG_Post->GetXaxis()->SetRangeUser(1,N_STRIPS+1);
+		TG_Post->GetXaxis()->SetRangeUser(1,N_STRIPS);
 		// TG_Post->GetYaxis()->SetRangeUser(y_min,y_max);
-		TG_Post->Draw("AP");
+		TG_Post->Draw("AB");
 		PolNProfile->SetLineColor(4);
 		// PolNProfile->Draw("same L");
 		TG_Post->Write("TG_Post");
@@ -923,6 +1373,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 
 	Profile->Delete();
 	ProfExc->Delete();
+	Visu->Delete();
 	SinProfile->Delete();
 	PolNProfile->Delete();
 	TG_Prof_Exc->Delete();
@@ -949,8 +1400,10 @@ int main(int argc, char** argv)
 	TString name_area;
 	unsigned short label;
 	int data_calib=0;
+	int data_meas=0;
 	int count_tot=0;
 	int npeak;
+	int ii;
 	int i_cx;
 	int i_cy;
 	int in_area=0;
@@ -990,7 +1443,7 @@ int main(int argc, char** argv)
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
 	double chargeOverT=0.;
-	double Threshold=0.;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
+	double Threshold=0.05;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double offset=25.;
 	double factor_bdf=.001;
 	double bdfX[N_STRIPS];
@@ -1060,7 +1513,11 @@ int main(int argc, char** argv)
 	AreaX->Reset();
 	AreaY->Reset();
 
-	SignalArea(filename,&tot_area,signal_time);
+	if(area_find_param==0)
+		DerivativeSignalArea(filename,&tot_area,signal_time);
+	else	
+		ChargeSignalArea(filename,&tot_area,signal_time);
+	
 	if(tot_area>MAX_SMPL)
 	{
 		cout<<"Nombre d'irradiation supérieur à la limite"<<endl;
@@ -1094,6 +1551,8 @@ int main(int argc, char** argv)
 		label=faster_data_label(data);
 		if(label==LabelCount)
 			data_calib=1;
+		if(label==LabelScaler)
+			data_meas=1;
 		if(label==LabelX||label==LabelY)
 		{
 			if(t0==-1)
@@ -1239,7 +1698,8 @@ int main(int argc, char** argv)
 				// 	chargeTot_signal+=(sum_x+sum_y)/2.;
 					// chargeTot_signal+=sum_y;
 				count_tot++;
-				if(sum_x>Threshold&&sum_y>Threshold)
+				// if(sum_x>Threshold&&sum_y>Threshold)
+				if(sum_x>0.&&sum_y>0.)
 				{
 					for(int j=0;j<N_STRIPS;j++)
 					{
@@ -1281,17 +1741,31 @@ int main(int argc, char** argv)
 				mean_y=0.;
 				rms_x=0.;
 				rms_y=0.;
-				sum_x=AreaX->GetSum();
-				sum_y=AreaY->GetSum();
+				sum_x=0.;
+				sum_y=0.;
+				// sum_x=AreaX->GetSum();
+				// sum_y=AreaY->GetSum();
 				for(int i=0;i<N_STRIPS;i++)
 				{
+					ii=i+1;
 					Profil_x_area->SetBinContent(i+1,AreaX->GetAt(i));
 					Profil_y_area->SetBinContent(i+1,AreaY->GetAt(i));
 					// cout<<i<<" "<<AreaX->GetAt(i)<<endl;
-					mean_x+=i*AreaX->GetAt(i);
-					rms_x+=i*i*AreaX->GetAt(i);
-					mean_y+=i*AreaY->GetAt(i);
-					rms_y+=i*i*AreaY->GetAt(i);
+					if(AreaX->GetAt(i)>Threshold)
+					{
+						mean_x+=ii*AreaX->GetAt(i);
+						rms_x+=ii*ii*AreaX->GetAt(i);
+						sum_x+=AreaX->GetAt(i);
+					}
+					if(AreaY->GetAt(i)>Threshold)
+					{
+						mean_y+=ii*AreaY->GetAt(i);
+						rms_y+=ii*ii*AreaY->GetAt(i);
+						sum_y+=AreaY->GetAt(i);
+					}
+				}
+
+				for(int i=0;i<N_STRIPS;i++)
 					for(int k=0;k<N_STRIPS;k++)
 					{
 						if(sum_x>0.&&sum_y>0.)
@@ -1299,7 +1773,6 @@ int main(int argc, char** argv)
 						else	
 							TH2_Area->SetBinContent(i+1,k+1,0.);
 					}
-				}
 				if(sum_x>0.)
 				{
 					// cout<<mean_x<<" "<<sum_x<<endl;
@@ -1467,8 +1940,8 @@ int main(int argc, char** argv)
 			{
 				if(nbSummedSample>=MAX_SMPL)
 					cout<<"Maximum number of samples reached"<<endl;
-				else if(in_area==0&&tot_area>0)
-				// else
+				// else if(in_area==0&&tot_area>0)
+				else
 				{
 					TH1F* Profil_x_smpl=new TH1F("Profil_x_area","X profile in number of particles",N_STRIPS,1,33);
 					TH1F* Profil_y_smpl=new TH1F("Profil_y_area","Y profile in number of particles",N_STRIPS,1,33);
@@ -1481,17 +1954,28 @@ int main(int argc, char** argv)
 					mean_y=0.;
 					rms_x=0.;
 					rms_y=0.;
+					sum_x=0.;
+					sum_y=0.;
 					for(int i=0;i<N_STRIPS;i++)
 					{
+						ii=i+1;
 						Profil_x_smpl->SetBinContent(i+1,SamplX->GetAt(i));
 						Profil_y_smpl->SetBinContent(i+1,SamplY->GetAt(i));
-						mean_x+=i*SamplX->GetAt(i);
-						rms_x+=i*i*SamplX->GetAt(i);
-						mean_y+=i*SamplY->GetAt(i);
-						rms_y+=i*i*SamplY->GetAt(i);
+						if(SamplX->GetAt(i)>Threshold)
+						{
+							mean_x+=ii*SamplX->GetAt(i);
+							rms_x+=ii*ii*SamplX->GetAt(i);
+							sum_x+=SamplX->GetAt(i);
+						}
+						if(SamplY->GetAt(i)>Threshold)
+						{
+							mean_y+=ii*SamplY->GetAt(i);
+							rms_y+=ii*ii*SamplY->GetAt(i);
+							sum_y+=SamplY->GetAt(i);
+						}
 					}
-					sum_x=SamplX->GetSum();
-					sum_y=SamplY->GetSum();
+					// sum_x=SamplX->GetSum();
+					// sum_y=SamplY->GetSum();
 					if(sum_x>0.)
 					{
 						mean_x/=sum_x;
@@ -1509,8 +1993,8 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						mean_x=0.;
-						rms_x=0.;
+						mean_y=0.;
+						rms_y=0.;
 					}
 					vect_time_spl[nbSummedSample]=fasterTime;
 					vect_charge_t_spl[nbSummedSample]=(sum_x+sum_y)/2.;
@@ -1845,11 +2329,17 @@ int main(int argc, char** argv)
 	TG_Rms_x->Delete();
 	TG_Rms_y->Delete();
 
-	if(data_calib==1)
+	if(data_calib==1&&tot_area>1)
 		// Calibrage(filename,chargeTot_pC);
 		Calibrage(filename,chargeTot_signal_X,chargeTot_signal_Y);
 	else
 		cout<<"Pas de données de calibrage"<<endl;
+
+	if(data_meas==1&&tot_area>1)
+		// Calibrage(filename,chargeTot_pC);
+		Scaler(filename,1./100.,tot_area,signal_time);
+	else
+		cout<<"Pas de données de mesure scaler"<<endl;
 
 	printf("Images générées\n");
 	faster_file_reader_close(reader);
