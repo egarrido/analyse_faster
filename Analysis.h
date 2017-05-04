@@ -186,36 +186,6 @@ double offXY[N_STRIPS][2]= {{18.9862,25.1487},
 // 														{25.0197,25.0457},
 // 														{25.022,25.0464}};
 
-///////////////////////////// Other //////////////////////////////////////////////////////////////
-TString doubleToString(double val, int nbFigures)
-{
-	TString s("");
-	double temp=val;
-	if(temp<0)
-	{
-		temp=-val;
-		s+="-";
-	}
-	s+=(int)temp;
-	s+=".";
-	int i=1;
-
-	while(i<=nbFigures)
-	{
-		if( (int)( TMath::Power(10.,i)*(temp-(int)temp) )==0 )
-		{
-			s+="0";
-			i++;
-		}
-		else
-		{
-			s+=(int)( TMath::Power(10.,nbFigures)*(temp-(int)temp) );
-			i=nbFigures+1;
-		}
-	}
-	return s;
-}
-
 void set_plot_style()
 {
 	const Int_t NRGBs = 5;

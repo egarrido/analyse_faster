@@ -352,6 +352,7 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 	double t0;
 	double fasterTime;
 	double Qth2th;
+	double maxy;
 	long int quanta=0;
 	double calib_factor;
 
@@ -406,6 +407,12 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				hQth2th->GetYaxis()->CenterTitle();
 				hQth2th->GetYaxis()->SetLabelSize(0.02);
 				hQth2th->Draw();
+				TLine *line= new TLine();
+				line->SetLineColor(2);
+				line->SetLineWidth(3);
+				maxy=hQth2th->GetMaximum();
+				for(int i=0;i<MAX_QNT;i++)
+					line->DrawLine(Seuil_quanta[current_area][i],0,Seuil_quanta[current_area][i],maxy);
 				name_qth2th="Picture/Qth2th_";
 				name_qth2th+=(current_area+1);
 				name_qth2th+=".png";
@@ -465,6 +472,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double seuilS=5.E-4;
 	double bdfX[N_STRIPS];
 	double bdfY[N_STRIPS];
+	double max_time;
 
 	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -750,6 +758,11 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_dCharge->GetYaxis()->SetLabelSize(0.05);
 	TG_dCharge->Write("DCharge");
 	TG_dCharge->Draw("AL");
+	max_time=vect_time_int[count_int-1];
+	TLine *line= new TLine();
+	line->SetLineColor(2);
+	line->DrawLine(0.,seuilD,max_time,seuilD);
+	line->DrawLine(0.,-seuilD,max_time,-seuilD);
 
 	cCharge->cd(4);
 	TGraph *TG_dMCharge=new TGraph(count_moy,vect_time_moy,vect_dcharge_moy);
@@ -936,6 +949,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double seuilS=5.E-4;
 	double bdfX[N_STRIPS];
 	double bdfY[N_STRIPS];
+	double max_time;
 
 	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -1107,6 +1121,10 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->GetYaxis()->SetLabelSize(0.05);
 	TG_Charge_int->Write("Charge int");
 	TG_Charge_int->Draw("AL");
+	max_time=vect_time_int[count_int-1];
+	TLine *line= new TLine();
+	line->SetLineColor(2);
+	line->DrawLine(0,seuilC,max_time,seuilC);
 
 	cCharge->cd(3);
 	TGraph *TG_dCharge=new TGraph(count_int,vect_time_int,vect_dcharge_int);
@@ -1252,6 +1270,11 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	hBdfY->Write("BdfY");
 	cBDF->SaveAs("Picture/Bruit_de_fond.png");
 	cBDF->Destructor();
+
+	ofstream bdf_file("Offset.txt",std::ios::out);
+	for(int i=0;i<N_STRIPS;i++)
+		bdf_file<<i<<" "<<offXY[i][0]<<" "<<offXY[i][1]<<endl;
+	bdf_file.close();
 }
 
 void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,double time,double *sum_val)
@@ -1265,20 +1288,21 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	// int binr=23;
 	double scale_value;
 	double bdf_SFB;
-	double par[6];
+	double par[10];
 	double y_min;
 	double y_max;
 
 	TH1F* Profile=new TH1F("Profile","Profile in charge",N_STRIPS,.5,32.5);
 	TH1F* ProfExc=new TH1F("ProfExc","Profile in charge without excluded points",N_STRIPS,1,33);
-	TH1F* Visu=new TH1F("Visu","Profile in charge without excluded points",N_STRIPS,.5,32.5);
 	TGraph *TG_Prof_Exc=new TGraph();
 	TGraph *TG_Post=new TGraph();
-	TF1* SinProfile=new TF1("SinProfile","TMath::Sin(x)",2,32);
-	TF1* PolNProfile=new TF1("PolNProfile","pol5",2,32);
+	TGraph *TG_Visu=new TGraph();
+	TF1* SinProfile=new TF1("SinProfile","TMath::Sin(x)",2,31);
+	// TF1* PolNProfile=new TF1("PolNProfile","pol5",2,31);
+	TF1* PolNProfile=new TF1("PolNProfile","pol8",2,31);
 	// TF1* PolNProfile=new TF1("PolNProfile",fline,2,32);
 
-	for(int i=0;i<N_STRIPS;i++)
+	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
 		// scale_value=(2.*(PreSFB[i]-min)/(max-min)-1.);
 		scale_value=PreSFB[i];
@@ -1300,16 +1324,31 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	par[3]=PolNProfile->GetParameter(3);
 	par[4]=PolNProfile->GetParameter(4);
 	par[5]=PolNProfile->GetParameter(5);
+	par[6]=PolNProfile->GetParameter(6);
+	par[7]=PolNProfile->GetParameter(7);
+	par[8]=PolNProfile->GetParameter(8);
+	// par[9]=PolNProfile->GetParameter(9);
 	
 	*sum_val=0.;
-	for(int i=0;i<N_STRIPS;i++)
+	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
 		double x=i+1;
-		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5);
+		// bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5);
+		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8);
+		// bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8)+par[9]*pow(x,9);
 		PostSFB[i]=PreSFB[i]-bdf_SFB;
 		*sum_val+=PostSFB[i];
 		if(SFBdraw==1)
+		{
 			TG_Post->SetPoint(i,x,PostSFB[i]);
+			TG_Visu->SetPoint(i,x-.5,bdf_SFB);
+		}
+	}
+	if(SFBdraw==1)
+	{
+		double x=LAST_ELEC+1;
+		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8);
+		TG_Visu->SetPoint(LAST_ELEC,x-.5,bdf_SFB);
 	}
 
 	if(SFBdraw==1)
@@ -1348,10 +1387,10 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		// TG_Prof_Exc->Write("TG_Prof_Exc");
 
 		PolNProfile->SetLineColor(4);
-		PolNProfile->Draw("same L");
-		// Profile->Fit(SinProfile,"QR");
-		// SinProfile->SetLineColor(4);
-		// SinProfile->Draw("same L");
+		// PolNProfile->Draw("same L");
+		TG_Visu->SetLineColor(4);
+		TG_Visu->SetLineWidth(2);
+		TG_Visu->Draw("same L");
 
 		cSFB->cd(2);
 		gStyle->SetBarWidth(0.9);
@@ -1378,8 +1417,6 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		TG_Post->GetXaxis()->SetRangeUser(1,N_STRIPS);
 		// TG_Post->GetYaxis()->SetRangeUser(y_min,y_max);
 		TG_Post->Draw("AB");
-		PolNProfile->SetLineColor(4);
-		// PolNProfile->Draw("same L");
 		TG_Post->Write("TG_Post");
 
 		// cSFB->SaveAs("Picture/SFB.png");
@@ -1389,11 +1426,11 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 
 	Profile->Delete();
 	ProfExc->Delete();
-	Visu->Delete();
 	SinProfile->Delete();
 	PolNProfile->Delete();
 	TG_Prof_Exc->Delete();
 	TG_Post->Delete();
+	TG_Visu->Delete();
 }
 
 int main(int argc, char** argv)
@@ -1665,7 +1702,6 @@ int main(int argc, char** argv)
 								val=0.; 
 							// ChX->SetAt(val*corrXY[j][0],j);
 							ChX->SetAt(val,j);
-							isLabelX=1;
 						break;
 						case LabelY:
 							val=charge-bdfY[j];
@@ -1676,7 +1712,6 @@ int main(int argc, char** argv)
 								val=0.; 
 							// ChY->SetAt(val*corrXY[j][1],j);
 							ChY->SetAt(val,j);
-							isLabelY=1;
 						break;
 					}
 				}
