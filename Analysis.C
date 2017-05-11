@@ -457,6 +457,155 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 	faster_file_reader_close(reader);
 }
 
+void BackgroundExtraction(char *file,double first_signal,double last_signal,double time_i,double time_f,int beg_on,int end_on)
+{
+	faster_file_reader_p reader;
+	faster_data_p data;
+	electrometer_data electro;
+	reader=faster_file_reader_open(file);
+
+	int k=0;
+	int label;
+	int signal_bdf=0;
+	int count_X=0;
+	int count_Y=0;
+	double charge;
+	double t0;
+	double fasterTime;
+	double bdf_sample=10.;
+	double bdfX[N_STRIPS];
+	double bdfY[N_STRIPS];
+
+	debut_bdf=time_i;
+	fin_bdf=time_f;
+
+	if(first_signal>bdf_sample)
+		debut_bdf=first_signal-bdf_sample;
+
+	if(last_signal<fin_bdf-bdf_sample)
+		fin_bdf=last_signal+bdf_sample;
+
+	if(bkgnd_param==1||bkgnd_param==3)
+	{
+		for(int i=0;i<N_STRIPS;i++)
+		{
+			bdfX[i]=0.;
+			bdfY[i]=0.;
+		}
+		reader=faster_file_reader_open(file);
+		while((data=faster_file_reader_next(reader))!=NULL) 
+		{
+			label=faster_data_label(data);
+			if(label==LabelX||label==LabelY)
+			{
+				faster_data_load(data,&electro);
+				fasterTime=faster_data_clock_sec(data)-t0;
+				if((fasterTime<(first_signal-1.)&&fasterTime>debut_bdf&&beg_on==0)||(fasterTime>(last_signal+1.)&&fasterTime<fin_bdf&&end_on==0))
+				{
+					signal_bdf=1;
+					for(int j=0;j<N_STRIPS;j++) 
+					{
+						charge=electrometer_channel_charge_pC(electro,j+1);
+						switch(label) 
+						{
+							case LabelX:
+								bdfX[j]+=charge;
+								if(j==0)
+									count_X++;
+							break;
+							case LabelY:
+								bdfY[j]+=charge;
+								if(j==0)
+									count_Y++;
+							break;
+						}
+					}
+				}
+			}
+		}
+		faster_file_reader_close(reader);
+		if(signal_bdf==1)
+			for(int i=0;i<N_STRIPS;i++)
+			{
+				offXY[i][0]=bdfX[i]/count_X;
+				offXY[i][1]=bdfY[i]/count_Y;
+			}
+	}
+
+	if(bkgnd_param==2)
+		for(int i=0;i<N_STRIPS;i++)
+		{
+			offXY[i][0]=0.;
+			offXY[i][1]=0.;
+		}
+
+	TCanvas *cBDF = new TCanvas("Bruit de fond");
+	cBDF->SetCanvasSize(1000,500);
+	cBDF->Divide(1,2);
+	TH1F *hBdfX = new TH1F("hBdfX","Background for X strips",N_STRIPS,.5,32.5);
+	TH1F *hBdfY = new TH1F("hBdfY","Background for Y strips",N_STRIPS,.5,32.5);
+	for(int i=0;i<N_STRIPS;i++)
+	{
+		// bdfX[i]=offset;
+		// bdfY[i]=offset;
+		bdfX[i]=offXY[i][0];
+		bdfY[i]=offXY[i][1];
+		hBdfX->SetBinContent(i+1,bdfX[i]);
+		hBdfY->SetBinContent(i+1,bdfY[i]);
+		// cout<<bdfX[i]<<" "<<bdfY[i]<<endl;
+	}
+	cBDF->cd(1);
+	hBdfX->SetFillColor(2);
+	hBdfX->GetXaxis()->SetTickSize(0.01);
+	hBdfX->GetXaxis()->SetNdivisions(N_STRIPS);
+	hBdfX->GetXaxis()->SetTitle("Strip");
+	hBdfX->GetXaxis()->CenterTitle();
+	hBdfX->GetXaxis()->SetTickSize(0.01);
+	hBdfX->GetXaxis()->SetTitleSize(0.06);
+	hBdfX->GetXaxis()->SetLabelSize(0.05);
+	hBdfX->GetYaxis()->SetTickSize(0.01);
+	hBdfX->GetYaxis()->SetTitle("Charge (pC)");
+	hBdfX->GetYaxis()->CenterTitle();
+	hBdfX->GetYaxis()->SetTickSize(0.01);
+	hBdfX->GetYaxis()->SetTitleSize(0.06);
+	hBdfX->GetYaxis()->SetLabelSize(0.05);
+	hBdfX->SetBarWidth(0.8);
+	hBdfX->SetBarOffset(0.1);
+	hBdfX->SetStats(0);
+	hBdfX->Draw("b");
+	hBdfX->Write("BdfX");
+	cBDF->cd(2);
+	hBdfY->SetFillColor(4);
+	hBdfY->GetXaxis()->SetTickSize(0.01);
+	hBdfY->GetXaxis()->SetNdivisions(N_STRIPS);
+	hBdfY->GetXaxis()->SetTitle("Strip");
+	hBdfY->GetXaxis()->CenterTitle();
+	hBdfY->GetXaxis()->SetTickSize(0.01);
+	hBdfY->GetXaxis()->SetTitleSize(0.06);
+	hBdfY->GetXaxis()->SetLabelSize(0.05);
+	hBdfY->GetYaxis()->SetTickSize(0.01);
+	hBdfY->GetYaxis()->SetTitle("Charge (pC)");
+	hBdfY->GetYaxis()->CenterTitle();
+	hBdfY->GetYaxis()->SetTickSize(0.01);
+	hBdfY->GetYaxis()->SetTitleSize(0.06);
+	hBdfY->GetYaxis()->SetLabelSize(0.05);
+	hBdfY->SetBarWidth(0.8);
+	hBdfY->SetBarOffset(0.1);
+	hBdfY->SetStats(0);
+	hBdfY->Draw("b");
+	hBdfY->Write("BdfY");
+	cBDF->SaveAs("Picture/Bruit_de_fond.png");
+
+	hBdfX->Delete();
+	hBdfY->Delete();
+	cBDF->Destructor();
+
+	ofstream bdf_file("Offset.txt",std::ios::out);
+	for(int i=0;i<N_STRIPS;i++)
+		bdf_file<<i<<" "<<offXY[i][0]<<" "<<offXY[i][1]<<endl;
+	bdf_file.close();
+}
+
 void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 {
 	faster_file_reader_p reader;
@@ -471,8 +620,6 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	int end_on=0;
 	int isLabelX;
 	int isLabelY;
-	int count_Y=0;
-	int count_X=0;
 	int count_tot=0;
 	int count_int=0;
 	int count_moy=0;
@@ -495,8 +642,6 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double test_signal;
 	double seuilD=50.;
 	double seuilS=5.E-4;
-	double bdfX[N_STRIPS];
-	double bdfY[N_STRIPS];
 	double max_time;
 
 	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -809,6 +954,8 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 
 	cCharge->SaveAs("Picture/Charge.png");
 
+	BackgroundExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
+
 	TG_Charge->Delete();
 	TG_Charge_int->Delete();
 	TG_dCharge->Delete();
@@ -819,121 +966,6 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_time_int);
 	free(vect_charge_int);
 	free(vect_dcharge_int);
-
-	int k=0;
-	int signal_bdf=0;
-
-	if(bkgnd_param==1||bkgnd_param==3)
-	{
-		for(int i=0;i<N_STRIPS;i++)
-		{
-			bdfX[i]=0.;
-			bdfY[i]=0.;
-		}
-		reader=faster_file_reader_open(file);
-		while((data=faster_file_reader_next(reader))!=NULL) 
-		{
-			label=faster_data_label(data);
-			if(label==LabelX||label==LabelY)
-			{
-				faster_data_load(data,&electro);
-				fasterTime=faster_data_clock_sec(data)-t0;
-				if((fasterTime<(first_signal-1.)&&beg_on==0)||(fasterTime>(last_signal+1.)&&end_on==0))
-				{
-					signal_bdf=1;
-					for(int j=0;j<N_STRIPS;j++) 
-					{
-						charge=electrometer_channel_charge_pC(electro,j+1);
-						switch(label) 
-						{
-							case LabelX:
-								bdfX[j]+=charge;
-								if(j==0)
-									count_X++;
-							break;
-							case LabelY:
-								bdfY[j]+=charge;
-								if(j==0)
-									count_Y++;
-							break;
-						}
-					}
-				}
-			}
-		}
-		faster_file_reader_close(reader);
-		if(signal_bdf==1)
-			for(int i=0;i<N_STRIPS;i++)
-			{
-				offXY[i][0]=bdfX[i]/count_X;
-				offXY[i][1]=bdfY[i]/count_Y;
-			}
-	}
-
-	if(bkgnd_param==2)
-		for(int i=0;i<N_STRIPS;i++)
-		{
-			offXY[i][0]=0.;
-			offXY[i][1]=0.;
-		}
-
-	TCanvas *cBDF = new TCanvas("Bruit de fond");
-	cBDF->SetCanvasSize(1000,500);
-	cBDF->Divide(1,2);
-	TH1F *hBdfX = new TH1F("hBdfX","Background for X strips",N_STRIPS,.5,32.5);
-	TH1F *hBdfY = new TH1F("hBdfY","Background for Y strips",N_STRIPS,.5,32.5);
-	for(int i=0;i<N_STRIPS;i++)
-	{
-		// bdfX[i]=offset;
-		// bdfY[i]=offset;
-		bdfX[i]=offXY[i][0];
-		bdfY[i]=offXY[i][1];
-		hBdfX->SetBinContent(i+1,bdfX[i]);
-		hBdfY->SetBinContent(i+1,bdfY[i]);
-		// cout<<bdfX[i]<<" "<<bdfY[i]<<endl;
-	}
-	cBDF->cd(1);
-	hBdfX->SetFillColor(2);
-	hBdfX->GetXaxis()->SetTickSize(0.01);
-	hBdfX->GetXaxis()->SetNdivisions(N_STRIPS);
-	hBdfX->GetXaxis()->SetTitle("Strip");
-	hBdfX->GetXaxis()->CenterTitle();
-	hBdfX->GetXaxis()->SetTickSize(0.01);
-	hBdfX->GetXaxis()->SetTitleSize(0.06);
-	hBdfX->GetXaxis()->SetLabelSize(0.05);
-	hBdfX->GetYaxis()->SetTickSize(0.01);
-	hBdfX->GetYaxis()->SetTitle("Charge (pC)");
-	hBdfX->GetYaxis()->CenterTitle();
-	hBdfX->GetYaxis()->SetTickSize(0.01);
-	hBdfX->GetYaxis()->SetTitleSize(0.06);
-	hBdfX->GetYaxis()->SetLabelSize(0.05);
-	hBdfX->SetBarWidth(0.8);
-	hBdfX->SetBarOffset(0.1);
-	hBdfX->SetStats(0);
-	hBdfX->Draw("b");
-	hBdfX->Write("BdfX");
-	cBDF->cd(2);
-	hBdfY->SetFillColor(4);
-	hBdfY->GetXaxis()->SetTickSize(0.01);
-	hBdfY->GetXaxis()->SetNdivisions(N_STRIPS);
-	hBdfY->GetXaxis()->SetTitle("Strip");
-	hBdfY->GetXaxis()->CenterTitle();
-	hBdfY->GetXaxis()->SetTickSize(0.01);
-	hBdfY->GetXaxis()->SetTitleSize(0.06);
-	hBdfY->GetXaxis()->SetLabelSize(0.05);
-	hBdfY->GetYaxis()->SetTickSize(0.01);
-	hBdfY->GetYaxis()->SetTitle("Charge (pC)");
-	hBdfY->GetYaxis()->CenterTitle();
-	hBdfY->GetYaxis()->SetTickSize(0.01);
-	hBdfY->GetYaxis()->SetTitleSize(0.06);
-	hBdfY->GetYaxis()->SetLabelSize(0.05);
-	hBdfY->SetBarWidth(0.8);
-	hBdfY->SetBarOffset(0.1);
-	hBdfY->SetStats(0);
-	hBdfY->Draw("b");
-	hBdfY->Write("BdfY");
-	cBDF->SaveAs("Picture/Bruit_de_fond.png");
-	cBDF->Destructor();
 }
 
 void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
@@ -950,8 +982,6 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	int end_on=0;
 	int isLabelX;
 	int isLabelY;
-	int count_Y=0;
-	int count_X=0;
 	int count_tot=0;
 	int count_int=0;
 	int nb_1sec=0;
@@ -972,8 +1002,6 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double test_signal;
 	double seuilC=40189.7;
 	double seuilS=5.E-4;
-	double bdfX[N_STRIPS];
-	double bdfY[N_STRIPS];
 	double max_time;
 
 	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -1172,6 +1200,8 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 
 	cCharge->SaveAs("Picture/Charge.png");
 
+	BackgroundExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
+
 	TG_Charge->Delete();
 	TG_Charge_int->Delete();
 	TG_dCharge->Delete();
@@ -1181,126 +1211,6 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_time_int);
 	free(vect_charge_int);
 	free(vect_dcharge_int);
-
-	int k=0;
-	int signal_bdf=0;
-
-	if(bkgnd_param==1||bkgnd_param==3)
-	{
-		for(int i=0;i<N_STRIPS;i++)
-		{
-			bdfX[i]=0.;
-			bdfY[i]=0.;
-		}
-		reader=faster_file_reader_open(file);
-		while((data=faster_file_reader_next(reader))!=NULL) 
-		{
-			label=faster_data_label(data);
-			if(label==LabelX||label==LabelY)
-			{
-				faster_data_load(data,&electro);
-				fasterTime=faster_data_clock_sec(data)-t0;
-				if((fasterTime<(first_signal-1.)&&beg_on==0)||(fasterTime>(last_signal+1.)&&end_on==0))
-				{
-					signal_bdf=1;
-					for(int j=0;j<N_STRIPS;j++) 
-					{
-						charge=electrometer_channel_charge_pC(electro,j+1);
-						switch(label) 
-						{
-							case LabelX:
-								bdfX[j]+=charge;
-								if(j==0)
-									count_X++;
-							break;
-							case LabelY:
-								bdfY[j]+=charge;
-								if(j==0)
-									count_Y++;
-							break;
-						}
-					}
-				}
-			}
-		}
-		faster_file_reader_close(reader);
-		if(signal_bdf==1)
-			for(int i=0;i<N_STRIPS;i++)
-			{
-				offXY[i][0]=bdfX[i]/count_X;
-				offXY[i][1]=bdfY[i]/count_Y;
-			}
-	}
-
-	if(bkgnd_param==2)
-		for(int i=0;i<N_STRIPS;i++)
-		{
-			offXY[i][0]=0.;
-			offXY[i][1]=0.;
-		}
-
-	TCanvas *cBDF = new TCanvas("Bruit de fond");
-	cBDF->SetCanvasSize(1000,500);
-	cBDF->Divide(1,2);
-	TH1F *hBdfX = new TH1F("hBdfX","Background for X strips",N_STRIPS,.5,32.5);
-	TH1F *hBdfY = new TH1F("hBdfY","Background for Y strips",N_STRIPS,.5,32.5);
-	for(int i=0;i<N_STRIPS;i++)
-	{
-		// bdfX[i]=offset;
-		// bdfY[i]=offset;
-		bdfX[i]=offXY[i][0];
-		bdfY[i]=offXY[i][1];
-		hBdfX->SetBinContent(i+1,bdfX[i]);
-		hBdfY->SetBinContent(i+1,bdfY[i]);
-		// cout<<bdfX[i]<<" "<<bdfY[i]<<endl;
-	}
-	cBDF->cd(1);
-	hBdfX->SetFillColor(2);
-	hBdfX->GetXaxis()->SetTickSize(0.01);
-	hBdfX->GetXaxis()->SetNdivisions(N_STRIPS);
-	hBdfX->GetXaxis()->SetTitle("Strip");
-	hBdfX->GetXaxis()->CenterTitle();
-	hBdfX->GetXaxis()->SetTickSize(0.01);
-	hBdfX->GetXaxis()->SetTitleSize(0.06);
-	hBdfX->GetXaxis()->SetLabelSize(0.05);
-	hBdfX->GetYaxis()->SetTickSize(0.01);
-	hBdfX->GetYaxis()->SetTitle("Charge (pC)");
-	hBdfX->GetYaxis()->CenterTitle();
-	hBdfX->GetYaxis()->SetTickSize(0.01);
-	hBdfX->GetYaxis()->SetTitleSize(0.06);
-	hBdfX->GetYaxis()->SetLabelSize(0.05);
-	hBdfX->SetBarWidth(0.8);
-	hBdfX->SetBarOffset(0.1);
-	hBdfX->SetStats(0);
-	hBdfX->Draw("b");
-	hBdfX->Write("BdfX");
-	cBDF->cd(2);
-	hBdfY->SetFillColor(4);
-	hBdfY->GetXaxis()->SetTickSize(0.01);
-	hBdfY->GetXaxis()->SetNdivisions(N_STRIPS);
-	hBdfY->GetXaxis()->SetTitle("Strip");
-	hBdfY->GetXaxis()->CenterTitle();
-	hBdfY->GetXaxis()->SetTickSize(0.01);
-	hBdfY->GetXaxis()->SetTitleSize(0.06);
-	hBdfY->GetXaxis()->SetLabelSize(0.05);
-	hBdfY->GetYaxis()->SetTickSize(0.01);
-	hBdfY->GetYaxis()->SetTitle("Charge (pC)");
-	hBdfY->GetYaxis()->CenterTitle();
-	hBdfY->GetYaxis()->SetTickSize(0.01);
-	hBdfY->GetYaxis()->SetTitleSize(0.06);
-	hBdfY->GetYaxis()->SetLabelSize(0.05);
-	hBdfY->SetBarWidth(0.8);
-	hBdfY->SetBarOffset(0.1);
-	hBdfY->SetStats(0);
-	hBdfY->Draw("b");
-	hBdfY->Write("BdfY");
-	cBDF->SaveAs("Picture/Bruit_de_fond.png");
-	cBDF->Destructor();
-
-	ofstream bdf_file("Offset.txt",std::ios::out);
-	for(int i=0;i<N_STRIPS;i++)
-		bdf_file<<i<<" "<<offXY[i][0]<<" "<<offXY[i][1]<<endl;
-	bdf_file.close();
 }
 
 void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,double time,double *sum_val)
@@ -1747,13 +1657,18 @@ int main(int argc, char** argv)
 			}
 			if(isLabelX==1&&isLabelY==1)
 			{
+				sum_x=0.;
+				sum_y=0.;
 				for(int j=0;j<N_STRIPS;j++)
 				{
 					val=ChX->GetAt(j);
 					ProfilX[j]+=val;
 					val=ChY->GetAt(j);
 					ProfilY[j]+=val;
-
+					if(ChX->GetAt(j)>Threshold)
+						sum_x+=ChX->GetAt(j);
+					if(ChY->GetAt(j)>Threshold)
+						sum_y+=ChY->GetAt(j);
 					val=ChX->GetAt(j)+SamplX->GetAt(j);
 					SamplX->SetAt(val,j);
 					val=ChY->GetAt(j)+SamplY->GetAt(j);
@@ -1767,16 +1682,11 @@ int main(int argc, char** argv)
 						AreaY->SetAt(val,j);
 					}
 				}
-				sum_x=ChX->GetSum();
-				sum_y=ChY->GetSum();
-				// sum_x=ChX->GetSum()-ChX->GetAt(0)-ChX->GetAt(N_STRIPS-1);
-				// sum_y=ChY->GetSum()-ChY->GetAt(0)-ChY->GetAt(N_STRIPS-1);
+				// sum_x=ChX->GetSum();
+				// sum_y=ChY->GetSum();
 				vect_time_tot[count_tot]=fasterTime;
 				vect_charge_clean[count_tot]=(sum_x+sum_y)/2.;
 				chargeTot_pC+=(sum_x+sum_y)/2.;
-				// if(in_area==0)
-				// 	chargeTot_signal+=(sum_x+sum_y)/2.;
-					// chargeTot_signal+=sum_y;
 				count_tot++;
 				// if(sum_x>Threshold&&sum_y>Threshold)
 				if(sum_x>0.&&sum_y>0.)
@@ -1791,20 +1701,12 @@ int main(int argc, char** argv)
 					}
 					chargeOverT+=(sum_x+sum_y)/2.;
 				}
-				// else
-				// {
-				// 	for(int j=0;j<N_STRIPS;j++)
-				// 	{
-				// 		ProfilX_left[j]+=ChX->GetAt(j);
-				// 		ProfilY_left[j]+=ChY->GetAt(j);
-				// 	}
-				// }
 				ChX->Reset();
 				ChY->Reset();
 				isLabelX=0;
 				isLabelY=0;
 			}
-			// cout<<fasterTime<<" "<<" "<<t1<<" "<<integralTime<<" "<<SamplingTime<<endl;
+
 			if(in_area==1&&tot_area>0)
 			{
 				name_area="TH2_Area_";
@@ -2141,17 +2043,8 @@ int main(int argc, char** argv)
 		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Carge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 
 	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge partielle : "<<chargeOverT<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
-	// cout<<nIntegration<<endl;
 
-	double FullTablePosition[N_STRIPS]; 											// table of possible position of the beam
-	for(int i=0;i<N_STRIPS;i++)
-		FullTablePosition[i]=-46.5+i*3; //+118.5
-
-	// TH2F* TH2_Map=new TH2F("TH2_Map","Fluency map (particle/cm2)",N_STRIPS-2,FullTablePosition[1]-1.5,FullTablePosition[N_STRIPS-2]+1.5,N_STRIPS-2,FullTablePosition[1]-1.5,FullTablePosition[N_STRIPS-2]+1.5);
-	// TH2F* TH2_Map=new TH2F("TH2_Map","Fluency map (particle/cm2)",N_STRIPS,FullTablePosition[0]-1.5,FullTablePosition[N_STRIPS-1]+1.5,N_STRIPS,FullTablePosition[0]-1.5,FullTablePosition[N_STRIPS-1]+1.5);
 	TH2F* TH2_Map=new TH2F("TH2_Map","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
-	// TH1F* Profil_x=new TH1F("ProfX","X profile in number of particles",N_STRIPS,FullTablePosition[0]-1.5,FullTablePosition[N_STRIPS-1]+1.5);
-	// TH1F* Profil_y=new TH1F("ProfY","Y profile in number of particles", N_STRIPS,FullTablePosition[0]-1.5,FullTablePosition[N_STRIPS-1]+1.5);
 	TH1F* Profil_x=new TH1F("ProfX","X profile in number of particles",N_STRIPS,1,33);
 	TH1F* Profil_y=new TH1F("ProfY","Y profile in number of particles",N_STRIPS,1,33);
 
@@ -2183,15 +2076,22 @@ int main(int argc, char** argv)
 	TArrow *arrow= new TArrow();
 	arrow->SetLineColor(6);
 	arrow->SetLineWidth(1.5);
-	// if(tot_area>0)
-	for(int i=0;i<tot_area;i++)
+	if(tot_area>0)
 	{
-		line->SetLineColor(4);
-		line->DrawLine(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][0],TG_CCharge->GetYaxis()->GetXmax()/1.1);
-		line->DrawLine(signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmax()/1.1);
-		arrow->DrawArrow(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.15,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.15,0.005,"<>");
+		for(int i=0;i<tot_area;i++)
+		{
+			line->DrawLine(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][0],TG_CCharge->GetYaxis()->GetXmax()/1.1);
+			line->DrawLine(signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmax()/1.1);
+			arrow->DrawArrow(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.15,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.15,0.005,"<>");
+		}
+		TBox *box= new TBox();
+		box->SetFillStyle(0);
+		box->SetLineColor(6);
+		box->SetLineWidth(2);
+		box->SetLineStyle(5);
+		box->DrawBox(debut_bdf,TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[0][0],TG_CCharge->GetYaxis()->GetXmax()/1.1);
+		box->DrawBox(signal_time[tot_area-1][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,fin_bdf,TG_CCharge->GetYaxis()->GetXmax()/1.1);
 	}
-
 	cCCharge->SaveAs("Picture/Charge_clean.png");
 
 	TG_CCharge->Delete();
