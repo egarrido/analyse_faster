@@ -230,6 +230,14 @@ double Extremum(double a,double b,double c,double d,double e)
 
 void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 {
+	Vect_calib_factor.clear();
+	Vect_calib_charge.clear();
+	Vect_calib_quanta.clear();
+
+	Vect_calib_factor.resize(1);
+	Vect_calib_charge.resize(1);
+	Vect_calib_quanta.resize(1);
+
 	faster_file_reader_p reader;
 	faster_data_p data;
 	scaler_counter scaler_cnt;
@@ -329,6 +337,10 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 		cout<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
 		cout<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
 		cout<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+
+		Vect_calib_factor.push_back(calib_factor);
+		Vect_calib_charge.push_back(chargeTot_pC);
+		Vect_calib_quanta.push_back(quanta);
 	}
 	else
 		cout<<"Pas de données de calibrage, nombre de quanta nul"<<endl;
@@ -340,6 +352,14 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 
 void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[])
 {
+	Vect_calib_factor.clear();
+	Vect_calib_charge.clear();
+	Vect_calib_quanta.clear();
+
+	Vect_calib_factor.resize(tot_area);
+	Vect_calib_charge.resize(tot_area);
+	Vect_calib_quanta.resize(tot_area);
+
 	faster_file_reader_p reader;
 	faster_data_p data;
 	scaler_measurement scaler_meas;
@@ -424,6 +444,11 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				calib_factor=vect_charge_t[current_area]/quanta*decimation;
 				cout<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 
+				Vect_calib_factor[current_area]=calib_factor;
+				Vect_calib_charge[current_area]=vect_charge_t[current_area];
+				Vect_calib_quanta[current_area]=quanta;
+
+				in_area=2;
 				current_area+=1;
 				quanta=0;
 			}
@@ -758,11 +783,6 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_dCharge->GetYaxis()->SetLabelSize(0.05);
 	TG_dCharge->Write("DCharge");
 	TG_dCharge->Draw("AL");
-	max_time=vect_time_int[count_int-1];
-	TLine *line= new TLine();
-	line->SetLineColor(2);
-	line->DrawLine(0.,seuilD,max_time,seuilD);
-	line->DrawLine(0.,-seuilD,max_time,-seuilD);
 
 	cCharge->cd(4);
 	TGraph *TG_dMCharge=new TGraph(count_moy,vect_time_moy,vect_dcharge_moy);
@@ -781,6 +801,11 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_dMCharge->GetYaxis()->SetLabelSize(0.05);
 	TG_dMCharge->Write("DMCharge");
 	TG_dMCharge->Draw("AL");
+	max_time=vect_time_int[count_int-1];
+	TLine *line= new TLine();
+	line->SetLineColor(2);
+	line->DrawLine(0.,seuilD,max_time,seuilD);
+	line->DrawLine(0.,-seuilD,max_time,-seuilD);
 
 	cCharge->SaveAs("Picture/Charge.png");
 
@@ -945,7 +970,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double yl2,yl1,yr1,yr2,h;
 	double dyl2,dyl1,dyr1,dyr2;
 	double test_signal;
-	double seuilC=40200.;
+	double seuilC=40189.7;
 	double seuilS=5.E-4;
 	double bdfX[N_STRIPS];
 	double bdfY[N_STRIPS];
@@ -1015,6 +1040,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	*tot_area=0;
 	h=vect_time_int[1]-vect_time_int[0];
 	nb_1sec=1+(int)1./h;
+	nb_1sec=2;
 	for(int i=2;i<count_int-1;i++)
 	{
 		if(i<2)
@@ -1383,6 +1409,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		TG_Prof_Exc->Draw("AP");
 		Profile->SetLineColor(2);
 		Profile->SetLineWidth(2);
+		Profile->SetStats(0);
 		Profile->Draw("same");
 		// TG_Prof_Exc->Write("TG_Prof_Exc");
 
@@ -1498,7 +1525,7 @@ int main(int argc, char** argv)
 	double chargeOverT=0.;
 	double Threshold=0.05;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double offset=25.;
-	double factor_bdf=.001;
+	double factor_bdf=.00001;
 	double bdfX[N_STRIPS];
 	double bdfY[N_STRIPS];
 	float* PeakX;
@@ -1578,7 +1605,7 @@ int main(int argc, char** argv)
 	}
 	cout<<tot_area<<" période(s) d'irradiation"<<endl;
 	for(int i=0;i<tot_area;i++)
-		cout<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<endl;
+		cout<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<endl;
 
 	nbSummedSample=0;
 	count_area=0;
@@ -1702,6 +1729,7 @@ int main(int argc, char** argv)
 								val=0.; 
 							// ChX->SetAt(val*corrXY[j][0],j);
 							ChX->SetAt(val,j);
+							isLabelX=1;
 						break;
 						case LabelY:
 							val=charge-bdfY[j];
@@ -1712,6 +1740,7 @@ int main(int argc, char** argv)
 								val=0.; 
 							// ChY->SetAt(val*corrXY[j][1],j);
 							ChY->SetAt(val,j);
+							isLabelY=1;
 						break;
 					}
 				}
@@ -2127,7 +2156,7 @@ int main(int argc, char** argv)
 	TH1F* Profil_y=new TH1F("ProfY","Y profile in number of particles",N_STRIPS,1,33);
 
 	TCanvas *cCCharge= new TCanvas("Charge over time");
-	cCCharge->SetCanvasSize(1000,250);
+	cCCharge->SetCanvasSize(2000,500);
 	cCCharge->Divide(1,1);
 
 	cCCharge->cd(1);
@@ -2147,6 +2176,21 @@ int main(int argc, char** argv)
 	TG_CCharge->GetYaxis()->SetLabelSize(0.05);
 	TG_CCharge->Write("Charge");
 	TG_CCharge->Draw("AL");
+
+	TLine *line= new TLine();
+	line->SetLineColor(4);
+	line->SetLineWidth(1.5);
+	TArrow *arrow= new TArrow();
+	arrow->SetLineColor(6);
+	arrow->SetLineWidth(1.5);
+	// if(tot_area>0)
+	for(int i=0;i<tot_area;i++)
+	{
+		line->SetLineColor(4);
+		line->DrawLine(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][0],TG_CCharge->GetYaxis()->GetXmax()/1.1);
+		line->DrawLine(signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmax()/1.1);
+		arrow->DrawArrow(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.15,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.15,0.005,"<>");
+	}
 
 	cCCharge->SaveAs("Picture/Charge_clean.png");
 
@@ -2391,6 +2435,12 @@ int main(int argc, char** argv)
 		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area);
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
+
+	// if(Vect_calib_factor.size()>0)
+	// {
+	// 	for(int i=0;i<Vect_calib_factor.size();i++)
+	// 		cout<<Vect_calib_factor[i]*1000<<" "<<Vect_calib_charge[i]<<" "<<Vect_calib_quanta[i]<<endl;
+	// }
 
 	printf("Images générées\n");
 	faster_file_reader_close(reader);

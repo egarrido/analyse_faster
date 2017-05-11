@@ -51,6 +51,10 @@ std::vector<double> Value_init;
 std::vector<double> PreSFB;
 std::vector<double> PostSFB;
 
+std::vector<double> Vect_calib_factor;
+std::vector<double> Vect_calib_charge;
+std::vector<long int> Vect_calib_quanta;
+
 string data_folder;
 string data_faster_file;
 string data_audio_file;
