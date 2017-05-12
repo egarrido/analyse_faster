@@ -126,8 +126,8 @@ double corrXY[N_STRIPS][2]={{1.00000,1.00000},
 														{1.00000,1.00000},
 														{1.00000,1.00000}};
 
-double debut_bdf;
-double fin_bdf;
+double debut_eoff;
+double fin_eoff;
 double offXY[N_STRIPS][2]= {{18.9862,25.1487},
 														{25.1365,25.1032},
 														{25.0929,25.064},
