@@ -473,8 +473,8 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	double t0;
 	double fasterTime;
 	double eoff_sample=10.;
-	double EOfX[N_STRIPS];
-	double EOfY[N_STRIPS];
+	double EOffX[N_STRIPS];
+	double EOffY[N_STRIPS];
 
 	debut_eoff=time_i;
 	fin_eoff=time_f;
@@ -489,8 +489,8 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	{
 		for(int i=0;i<N_STRIPS;i++)
 		{
-			EOfX[i]=0.;
-			EOfY[i]=0.;
+			EOffX[i]=0.;
+			EOffY[i]=0.;
 		}
 		reader=faster_file_reader_open(file);
 		while((data=faster_file_reader_next(reader))!=NULL) 
@@ -509,12 +509,12 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 						switch(label) 
 						{
 							case LabelX:
-								EOfX[j]+=charge;
+								EOffX[j]+=charge;
 								if(j==0)
 									count_X++;
 							break;
 							case LabelY:
-								EOfY[j]+=charge;
+								EOffY[j]+=charge;
 								if(j==0)
 									count_Y++;
 							break;
@@ -527,8 +527,8 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 		if(signal_eoff==1)
 			for(int i=0;i<N_STRIPS;i++)
 			{
-				offXY[i][0]=EOfX[i]/count_X;
-				offXY[i][1]=EOfY[i]/count_Y;
+				offXY[i][0]=EOffX[i]/count_X;
+				offXY[i][1]=EOffY[i]/count_Y;
 			}
 	}
 
@@ -542,62 +542,62 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	TCanvas *cEOff = new TCanvas("Electronique offset");
 	cEOff->SetCanvasSize(1000,500);
 	cEOff->Divide(1,2);
-	TH1F *hEOfX = new TH1F("hEOfX","Electronique offset for X strips",N_STRIPS,.5,32.5);
-	TH1F *hEOfY = new TH1F("hEOfY","Electronique offset for Y strips",N_STRIPS,.5,32.5);
+	TH1F *hEOffX = new TH1F("hEOffX","Electronique offset for X strips",N_STRIPS,.5,32.5);
+	TH1F *hEOffY = new TH1F("hEOffY","Electronique offset for Y strips",N_STRIPS,.5,32.5);
 	for(int i=0;i<N_STRIPS;i++)
 	{
-		// EOfX[i]=offset;
-		// EOfY[i]=offset;
-		EOfX[i]=offXY[i][0];
-		EOfY[i]=offXY[i][1];
-		hEOfX->SetBinContent(i+1,EOfX[i]);
-		hEOfY->SetBinContent(i+1,EOfY[i]);
-		// cout<<EOfX[i]<<" "<<EOfY[i]<<endl;
+		// EOffX[i]=offset;
+		// EOffY[i]=offset;
+		EOffX[i]=offXY[i][0];
+		EOffY[i]=offXY[i][1];
+		hEOffX->SetBinContent(i+1,EOffX[i]);
+		hEOffY->SetBinContent(i+1,EOffY[i]);
+		// cout<<EOffX[i]<<" "<<EOffY[i]<<endl;
 	}
 	cEOff->cd(1);
-	hEOfX->SetFillColor(2);
-	hEOfX->GetXaxis()->SetTickSize(0.01);
-	hEOfX->GetXaxis()->SetNdivisions(N_STRIPS);
-	hEOfX->GetXaxis()->SetTitle("Strip");
-	hEOfX->GetXaxis()->CenterTitle();
-	hEOfX->GetXaxis()->SetTickSize(0.01);
-	hEOfX->GetXaxis()->SetTitleSize(0.06);
-	hEOfX->GetXaxis()->SetLabelSize(0.05);
-	hEOfX->GetYaxis()->SetTickSize(0.01);
-	hEOfX->GetYaxis()->SetTitle("Charge (pC)");
-	hEOfX->GetYaxis()->CenterTitle();
-	hEOfX->GetYaxis()->SetTickSize(0.01);
-	hEOfX->GetYaxis()->SetTitleSize(0.06);
-	hEOfX->GetYaxis()->SetLabelSize(0.05);
-	hEOfX->SetBarWidth(0.8);
-	hEOfX->SetBarOffset(0.1);
-	hEOfX->SetStats(0);
-	hEOfX->Draw("b");
-	hEOfX->Write("EOfX");
+	hEOffX->SetFillColor(2);
+	hEOffX->GetXaxis()->SetTickSize(0.01);
+	hEOffX->GetXaxis()->SetNdivisions(N_STRIPS);
+	hEOffX->GetXaxis()->SetTitle("Strip");
+	hEOffX->GetXaxis()->CenterTitle();
+	hEOffX->GetXaxis()->SetTickSize(0.01);
+	hEOffX->GetXaxis()->SetTitleSize(0.06);
+	hEOffX->GetXaxis()->SetLabelSize(0.05);
+	hEOffX->GetYaxis()->SetTickSize(0.01);
+	hEOffX->GetYaxis()->SetTitle("Charge (pC)");
+	hEOffX->GetYaxis()->CenterTitle();
+	hEOffX->GetYaxis()->SetTickSize(0.01);
+	hEOffX->GetYaxis()->SetTitleSize(0.06);
+	hEOffX->GetYaxis()->SetLabelSize(0.05);
+	hEOffX->SetBarWidth(0.8);
+	hEOffX->SetBarOffset(0.1);
+	hEOffX->SetStats(0);
+	hEOffX->Draw("b");
+	hEOffX->Write("EOffX");
 	cEOff->cd(2);
-	hEOfY->SetFillColor(4);
-	hEOfY->GetXaxis()->SetTickSize(0.01);
-	hEOfY->GetXaxis()->SetNdivisions(N_STRIPS);
-	hEOfY->GetXaxis()->SetTitle("Strip");
-	hEOfY->GetXaxis()->CenterTitle();
-	hEOfY->GetXaxis()->SetTickSize(0.01);
-	hEOfY->GetXaxis()->SetTitleSize(0.06);
-	hEOfY->GetXaxis()->SetLabelSize(0.05);
-	hEOfY->GetYaxis()->SetTickSize(0.01);
-	hEOfY->GetYaxis()->SetTitle("Charge (pC)");
-	hEOfY->GetYaxis()->CenterTitle();
-	hEOfY->GetYaxis()->SetTickSize(0.01);
-	hEOfY->GetYaxis()->SetTitleSize(0.06);
-	hEOfY->GetYaxis()->SetLabelSize(0.05);
-	hEOfY->SetBarWidth(0.8);
-	hEOfY->SetBarOffset(0.1);
-	hEOfY->SetStats(0);
-	hEOfY->Draw("b");
-	hEOfY->Write("EOfY");
+	hEOffY->SetFillColor(4);
+	hEOffY->GetXaxis()->SetTickSize(0.01);
+	hEOffY->GetXaxis()->SetNdivisions(N_STRIPS);
+	hEOffY->GetXaxis()->SetTitle("Strip");
+	hEOffY->GetXaxis()->CenterTitle();
+	hEOffY->GetXaxis()->SetTickSize(0.01);
+	hEOffY->GetXaxis()->SetTitleSize(0.06);
+	hEOffY->GetXaxis()->SetLabelSize(0.05);
+	hEOffY->GetYaxis()->SetTickSize(0.01);
+	hEOffY->GetYaxis()->SetTitle("Charge (pC)");
+	hEOffY->GetYaxis()->CenterTitle();
+	hEOffY->GetYaxis()->SetTickSize(0.01);
+	hEOffY->GetYaxis()->SetTitleSize(0.06);
+	hEOffY->GetYaxis()->SetLabelSize(0.05);
+	hEOffY->SetBarWidth(0.8);
+	hEOffY->SetBarOffset(0.1);
+	hEOffY->SetStats(0);
+	hEOffY->Draw("b");
+	hEOffY->Write("EOffY");
 	cEOff->SaveAs("Picture/Offset_electronique.png");
 
-	hEOfX->Delete();
-	hEOfY->Delete();
+	hEOffX->Delete();
+	hEOffY->Delete();
 	cEOff->Destructor();
 
 	ofstream eoff_file("Offset.txt",std::ios::out);
@@ -851,7 +851,9 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 			count_moy++;
 		}
 	}
-	if(mvt==des)	//cela signifie que le fichier se termine sur un signal on
+	count_moy--;
+
+	if(mvt==des)
 	{
 		end_on=1;
 		cout<<"Attention, le fichier se termine sur du signal On"<<endl;
@@ -859,7 +861,6 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 		*tot_area=*tot_area+1;
 		last_signal=-1.;
 	}
-	count_moy--;
 
 	if(first_signal<2.&&*tot_area>0)
 	{
@@ -1000,7 +1001,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double yl2,yl1,yr1,yr2,h;
 	double dyl2,dyl1,dyr1,dyr2;
 	double test_signal;
-	double seuilC=40189.7;
+	double seuilC=40200.;
 	double seuilS=5.E-4;
 	double max_time;
 
@@ -1128,6 +1129,15 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 		}
 	}
 
+	if(mvt==des)
+	{
+		cout<<"Attention, le fichier se termine sur du signal On"<<endl;
+		signal_time[*tot_area][1]=vect_time_int[count_int-1];
+		*tot_area=*tot_area+1;
+		last_signal=-1.;
+		end_on=1;
+	}
+
 	if(first_signal<2.&&*tot_area>0)
 	{
 		cout<<"Attention, il semblerait que le fichier débute sur du signal On, premier signal à : "<<first_signal<<endl;
@@ -1199,6 +1209,15 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_dCharge->Draw("AL");
 
 	cCharge->SaveAs("Picture/Charge.png");
+
+	//§
+	*tot_area=1;
+	end_on=0;
+	signal_time[0][0]=11.;
+	signal_time[0][1]=vect_time[count_tot]-11.;
+	first_signal=signal_time[0][0];
+	last_signal=signal_time[0][1];
+	//§
 
 	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
 
@@ -1275,7 +1294,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8);
 		// bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8)+par[9]*pow(x,9);
 		PostSFB[i]=PreSFB[i]-bdf_SFB;
-		if(i+1>binl||i+1<binr)
+		if(i+1>binl&&i+1<binr)
 			*sum_val+=PostSFB[i];
 		if(SFBdraw==1)
 		{
@@ -1442,8 +1461,8 @@ int main(int argc, char** argv)
 	double Threshold=0.05;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double offset=25.;
 	double factor_eoff=.00001;
-	double EOfX[N_STRIPS];
-	double EOfY[N_STRIPS];
+	double EOffX[N_STRIPS];
+	double EOffY[N_STRIPS];
 	float* PeakX;
 	TArrayD* ChX=new TArrayD(N_STRIPS);
 	TArrayD* ChY=new TArrayD(N_STRIPS);
@@ -1472,6 +1491,8 @@ int main(int argc, char** argv)
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_clean=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* matrix_fluence=(double*)malloc(bin_up*bin_up*sizeof(double));
+
+	ofstream errrel("Output.txt",std::ios::out);
 
 	int config_simu=1;
 	if(argc>1)
@@ -1530,8 +1551,8 @@ int main(int argc, char** argv)
 
 	for(int j=0;j<N_STRIPS;j++)
 	{
-		EOfX[j]=offXY[j][0];
-		EOfY[j]=offXY[j][1];
+		EOffX[j]=offXY[j][0];
+		EOffY[j]=offXY[j][1];
 	}
 
 	int i_tmp=0;
@@ -1583,7 +1604,7 @@ int main(int argc, char** argv)
 					switch(label) 
 					{
 						case LabelX:
-							val=charge-EOfX[j];
+							val=charge-EOffX[j];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
 							PreSFB[j]=val;
@@ -1592,7 +1613,7 @@ int main(int argc, char** argv)
 							strip_max=borne_M_x;
 						break;
 						case LabelY:
-							val=charge-EOfY[j];
+							val=charge-EOffY[j];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
 							PreSFB[j]=val;
@@ -1603,11 +1624,13 @@ int main(int argc, char** argv)
 					}
 				}
 
-				if((fasterTime<mid_signal&&bool_print==0)||fasterTime>mid_signal)
+				if((fasterTime<mid_signal&&bool_print==2))
 					bool_print=0;
-				else
+				if((fasterTime>mid_signal&&bool_print==0))
 					bool_print=1;
 				SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
+				if(bool_print==1)
+					bool_print=2;
 
 				switch(label)
 				{
@@ -1617,6 +1640,7 @@ int main(int argc, char** argv)
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
 							ChX->SetAt(PostSFB[j],j); 
 						isLabelX=1;
+						errrel<<ChX->GetSum()<<" "<<sum_val<<endl;
 					break;
 					case LabelY:
 						if(in_area==0)
@@ -1624,6 +1648,7 @@ int main(int argc, char** argv)
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
 							ChY->SetAt(PostSFB[j],j);
 						isLabelY=1;
+						errrel<<ChY->GetSum()<<" "<<sum_val<<endl;
 					break;
 				}
 			}
@@ -1636,22 +1661,22 @@ int main(int argc, char** argv)
 					switch(label) 
 					{
 						case LabelX:
-							val=charge-EOfX[j];
+							val=charge-EOffX[j];
 							if(in_area==0)
 								chargeTot_signal_X+=val;
-							// val=TMath::Max(charge-EOfX[j],0.);
-							if(val<EOfX[j]*factor_eoff)
+							// val=TMath::Max(charge-EOffX[j],0.);
+							if(val<EOffX[j]*factor_eoff)
 								val=0.; 
 							// ChX->SetAt(val*corrXY[j][0],j);
 							ChX->SetAt(val,j);
 							isLabelX=1;
 						break;
 						case LabelY:
-							val=charge-EOfY[j];
+							val=charge-EOffY[j];
 							if(in_area==0)
 								chargeTot_signal_Y+=val;
-							// val=TMath::Max(charge-EOfY[j],0.);
-							if(val<EOfY[j]*factor_eoff)
+							// val=TMath::Max(charge-EOffY[j],0.);
+							if(val<EOffY[j]*factor_eoff)
 								val=0.; 
 							// ChY->SetAt(val*corrXY[j][1],j);
 							ChY->SetAt(val,j);
@@ -2341,16 +2366,17 @@ int main(int argc, char** argv)
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
 
-	if(Vect_calib_factor.size()>0)
-	{
-		for(int i=0;i<Vect_calib_factor.size();i++)
-			cout<<Vect_calib_factor[i]*1000<<" "<<Vect_calib_charge[i]<<" "<<Vect_calib_quanta[i]<<endl;
-	}
+	// if(Vect_calib_factor.size()>0)
+	// {
+	// 	for(int i=0;i<Vect_calib_factor.size();i++)
+	// 		cout<<Vect_calib_factor[i]*1000<<" "<<Vect_calib_charge[i]<<" "<<Vect_calib_quanta[i]<<endl;
+	// }
 
 	printf("Images générées\n");
 	faster_file_reader_close(reader);
 	free(filename);
 	rootfile->Close();
+	errrel.close();
 
 	char Execution[80];
 	sprintf(Execution,"rm -f -r %s",data_folder.c_str());
@@ -2361,4 +2387,6 @@ int main(int argc, char** argv)
 	system(Execution);
 	sprintf(Execution,"cp Output/PostAnalysis.root %s/",data_folder.c_str());
 	system(Execution);
+
+	return EXIT_SUCCESS;
 }
