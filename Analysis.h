@@ -76,6 +76,7 @@ const int LabelHVp=102;
 const int LabelHVn=101;
 
 int bkgnd_param=0;
+int calibrage_used=0;
 int area_find_param=0;
 int Strip_label;
 int Strip_number;

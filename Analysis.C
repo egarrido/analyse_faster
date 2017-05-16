@@ -98,8 +98,12 @@ void EntryParameters(int config_simu)
 							Value_init[ind_value]=3;
 					}
 					if(ind_value==3)
-						if(!buffer.compare("proton")||!buffer.compare("Proton")||!buffer.compare("p"))
-							Value_init[ind_value]=calib_data[2];
+					{
+						if(!buffer.compare("proton_Cyrce"))
+							Value_init[ind_value]=1;
+						if(!buffer.compare("proton_Arronax"))
+							Value_init[ind_value]=2;
+					}
 					if(ind_value==4)
 					{
 						value=(double)atof(buffer.c_str());
@@ -175,6 +179,7 @@ void EntryParameters(int config_simu)
 	cout<<" Parameters for the initialisation; config: "<<config_simu<<endl;
 	cout<<"--------------------------------------------------"<<endl;
 	cout<<" File of data: "<<data_faster_file<<endl;
+
 	ivar=2;
 	if(Value_init[ivar]==0)
 		cout<<" No background extraction, default values used"<<endl;
@@ -191,9 +196,17 @@ void EntryParameters(int config_simu)
 	bkgnd_param=Value_init[ivar];
 	
 	ivar=3;
-	cout<<" Calibration value: "<<Value_init[ivar]<<"(fC/part.)"<<endl;
+	if(Value_init[ivar]==0)
+		cout<<" No calibration value"<<endl;
+	if(Value_init[ivar]==1)
+		cout<<" Cyrce calibration values used"<<endl;
+	if(Value_init[ivar]==2)
+		cout<<" Arronax calibration values used"<<endl;
+	calibrage_used=Value_init[ivar];
+
 	ivar=4;
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+
 	ivar=7;
 	if(Value_init[ivar]==0)
 		cout<<" Derivative charge method used"<<endl;
@@ -226,6 +239,14 @@ double Extremum(double a,double b,double c,double d,double e)
 		extrm=e;
 	// cout<<a<<" "<<b<<" "<<c<<" "<<d<<" "<<e<<" "<<extrm<<" "<<endl;
 	return extrm;
+}
+
+double Calib_value(int area,int in_area)
+{
+	if(in_area!=0)
+		return 0.;
+	// return 1.;
+	return 1000./calib_data[area];
 }
 
 void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
@@ -441,7 +462,8 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				hQth2th->Reset();
 				cQth2th->Destructor();
 				
-				calib_factor=vect_charge_t[current_area]/quanta*decimation;
+				quanta/=decimation;
+				calib_factor=vect_charge_t[current_area]/quanta;
 				cout<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 
 				Vect_calib_factor[current_area]=calib_factor;
@@ -470,9 +492,9 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	int count_X=0;
 	int count_Y=0;
 	double charge;
-	double t0;
+	double t0=-1;
 	double fasterTime;
-	double eoff_sample=10.;
+	double eoff_sample=20.;
 	double EOffX[N_STRIPS];
 	double EOffY[N_STRIPS];
 
@@ -487,6 +509,7 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 
 	if(bkgnd_param==1||bkgnd_param==3)
 	{
+		cout<<"Extraction du bruit de fond électronique"<<endl;
 		for(int i=0;i<N_STRIPS;i++)
 		{
 			EOffX[i]=0.;
@@ -499,6 +522,8 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 			if(label==LabelX||label==LabelY)
 			{
 				faster_data_load(data,&electro);
+				if(t0==-1)
+					t0=faster_data_clock_sec(data);
 				fasterTime=faster_data_clock_sec(data)-t0;
 				if((fasterTime<(first_signal-1.)&&fasterTime>debut_eoff&&beg_on==0)||(fasterTime>(last_signal+1.)&&fasterTime<fin_eoff&&end_on==0))
 				{
@@ -1210,14 +1235,15 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 
 	cCharge->SaveAs("Picture/Charge.png");
 
-	//§
-	*tot_area=1;
-	end_on=0;
-	signal_time[0][0]=11.;
-	signal_time[0][1]=vect_time[count_tot]-11.;
-	first_signal=signal_time[0][0];
-	last_signal=signal_time[0][1];
-	//§
+	// //§
+	// *tot_area=1;
+	// end_on=0;
+	// beg_on=0;
+	// signal_time[0][0]=21.;
+	// signal_time[0][1]=vect_time[count_tot]-21.;
+	// first_signal=signal_time[0][0];
+	// last_signal=signal_time[0][1];
+	// //§
 
 	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
 
@@ -1454,6 +1480,7 @@ int main(int argc, char** argv)
 	double min;
 	double max;
 	double chargeInt;
+	double calib_factor;
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
@@ -1490,9 +1517,11 @@ int main(int argc, char** argv)
 
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_clean=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_charge_cumul=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_fluence_cumul=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* matrix_fluence=(double*)malloc(bin_up*bin_up*sizeof(double));
 
-	ofstream errrel("Output.txt",std::ios::out);
+	// ofstream errrel("Output.txt",std::ios::out);
 
 	int config_simu=1;
 	if(argc>1)
@@ -1631,6 +1660,9 @@ int main(int argc, char** argv)
 				SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
 				if(bool_print==1)
 					bool_print=2;
+				for(int iii=0;iii<N_STRIPS;iii++)
+				// 	errrel<<PostSFB[iii]<<" ";
+				// errrel<<endl;
 
 				switch(label)
 				{
@@ -1640,7 +1672,7 @@ int main(int argc, char** argv)
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
 							ChX->SetAt(PostSFB[j],j); 
 						isLabelX=1;
-						errrel<<ChX->GetSum()<<" "<<sum_val<<endl;
+						// errrel<<ChX->GetSum()<<" "<<sum_val<<endl;
 					break;
 					case LabelY:
 						if(in_area==0)
@@ -1648,7 +1680,7 @@ int main(int argc, char** argv)
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
 							ChY->SetAt(PostSFB[j],j);
 						isLabelY=1;
-						errrel<<ChY->GetSum()<<" "<<sum_val<<endl;
+						// errrel<<ChY->GetSum()<<" "<<sum_val<<endl;
 					break;
 				}
 			}
@@ -1716,8 +1748,21 @@ int main(int argc, char** argv)
 				// sum_y=ChY->GetSum();
 				vect_time_tot[count_tot]=fasterTime;
 				vect_charge_clean[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.;
+
+				if(count_tot>0)
+					vect_charge_cumul[count_tot]=vect_charge_cumul[count_tot-1]+(ChX->GetSum()+ChY->GetSum())/2.;
+				else
+					vect_charge_cumul[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.;
+
+				calib_factor=Calib_value(count_area,in_area);
+				if(count_tot>0)
+					vect_fluence_cumul[count_tot]=vect_fluence_cumul[count_tot-1]+(ChX->GetSum()+ChY->GetSum())/2.*calib_factor;
+				else
+					vect_fluence_cumul[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.*calib_factor;
+
 				chargeTot_pC+=(sum_x+sum_y)/2.;
 				count_tot++;
+
 				// if(sum_x>Threshold&&sum_y>Threshold)
 				if(sum_x>0.&&sum_y>0.)
 				{
@@ -2079,8 +2124,8 @@ int main(int argc, char** argv)
 	TH1F* Profil_y=new TH1F("ProfY","Y profile in number of particles",N_STRIPS,1,33);
 
 	TCanvas *cCCharge= new TCanvas("Charge over time");
-	cCCharge->SetCanvasSize(2000,500);
-	cCCharge->Divide(1,1);
+	cCCharge->SetCanvasSize(2000,1500);
+	cCCharge->Divide(1,3);
 
 	cCCharge->cd(1);
 	TGraph *TG_CCharge=new TGraph(count_tot,vect_time_tot,vect_charge_clean);
@@ -2122,12 +2167,53 @@ int main(int argc, char** argv)
 			arrow->DrawArrow(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.15,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.15,0.005,"<>");
 		}
 	}
+
+	cCCharge->cd(2);
+	TGraph *TG_CumulCharge=new TGraph(count_tot,vect_time_tot,vect_charge_cumul);
+	TG_CumulCharge->SetMarkerColor(2);
+	TG_CumulCharge->SetLineColor(2);
+	TG_CumulCharge->SetLineWidth(1.5);
+	TG_CumulCharge->SetTitle("Charge cumul over time");
+	TG_CumulCharge->GetXaxis()->SetTitle("Time (s)");
+	TG_CumulCharge->GetXaxis()->SetTickSize(0.01);
+	TG_CumulCharge->GetXaxis()->SetTitleSize(0.06);
+	TG_CumulCharge->GetXaxis()->SetLabelSize(0.05);
+	TG_CumulCharge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_CumulCharge->GetYaxis()->SetTickSize(0.01);
+	TG_CumulCharge->GetYaxis()->SetTitleSize(0.06);
+	TG_CumulCharge->GetYaxis()->CenterTitle();
+	TG_CumulCharge->GetYaxis()->SetLabelSize(0.05);
+	TG_CumulCharge->Write("Charge_cumul");
+	TG_CumulCharge->Draw("AL");
+
+	cCCharge->cd(3);
+	TGraph *TG_CumulFluence=new TGraph(count_tot,vect_time_tot,vect_fluence_cumul);
+	TG_CumulFluence->SetMarkerColor(2);
+	TG_CumulFluence->SetLineColor(2);
+	TG_CumulFluence->SetLineWidth(1.5);
+	TG_CumulFluence->SetTitle("Fluence cumul over time");
+	TG_CumulFluence->GetXaxis()->SetTitle("Time (s)");
+	TG_CumulFluence->GetXaxis()->SetTickSize(0.01);
+	TG_CumulFluence->GetXaxis()->SetTitleSize(0.06);
+	TG_CumulFluence->GetXaxis()->SetLabelSize(0.05);
+	TG_CumulFluence->GetYaxis()->SetTitle("Nbr. particles");
+	TG_CumulFluence->GetYaxis()->SetTickSize(0.01);
+	TG_CumulFluence->GetYaxis()->SetTitleSize(0.06);
+	TG_CumulFluence->GetYaxis()->CenterTitle();
+	TG_CumulFluence->GetYaxis()->SetLabelSize(0.05);
+	TG_CumulFluence->Write("Fluence_cumul");
+	TG_CumulFluence->Draw("AL");
+
 	cCCharge->SaveAs("Picture/Charge_clean.png");
 
 	TG_CCharge->Delete();
+	TG_CumulCharge->Delete();
+	TG_CumulFluence->Delete();
 	cCCharge->Destructor();
 	free(vect_time_tot);
 	free(vect_charge_clean);
+	free(vect_charge_cumul);
+	free(vect_fluence_cumul);
 
 	for(int j=0;j<N_STRIPS;j++)	
 	{
@@ -2376,7 +2462,7 @@ int main(int argc, char** argv)
 	faster_file_reader_close(reader);
 	free(filename);
 	rootfile->Close();
-	errrel.close();
+	// errrel.close();
 
 	char Execution[80];
 	sprintf(Execution,"rm -f -r %s",data_folder.c_str());
