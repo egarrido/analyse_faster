@@ -38,6 +38,8 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	6
 	Variable_init.push_back("Irradiation area finding way (charge/derivative)"); // 7
 	Value_init.push_back(0.);	//	7
+	Variable_init.push_back("Particle energy");
+	Value_init.push_back(0.);	//	8
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -103,6 +105,15 @@ void EntryParameters(int config_simu)
 							Value_init[ind_value]=1;
 						if(!buffer.compare("proton_Arronax"))
 							Value_init[ind_value]=2;
+					}
+					if(ind_value==8)
+					{
+						value=(double)atof(buffer.c_str());
+						if(value==0.)
+							cout<<" Multiple energies for primary particles"<<endl;
+						else	
+							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"; new value: "<<value<<endl;
+						Value_init[ind_value]=value;
 					}
 					if(ind_value==4)
 					{
@@ -204,6 +215,13 @@ void EntryParameters(int config_simu)
 		cout<<" Arronax calibration values used"<<endl;
 	calibrage_used=Value_init[ivar];
 
+	ivar=8;
+	if(Value_init[ivar]==0)
+		cout<<" Multiple energies for primary particles"<<endl;
+	else
+		cout<<" Energy of the particles: "<<Value_init[ivar]<<endl;
+	calibrage_used=Value_init[ivar];
+
 	ivar=4;
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 
@@ -243,10 +261,18 @@ double Extremum(double a,double b,double c,double d,double e)
 
 double Calib_value(int area,int in_area)
 {
+	double calib_polynome;
+	double energy=Value_init[8];
 	if(in_area!=0)
 		return 0.;
 	// return 1.;
-	return 1000./calib_data[area];
+	if(energy==0.)
+		return 1000./calib_data[area];
+	else
+	{
+		calib_polynome=calib_par[0]+calib_par[1]*energy+calib_par[2]*pow(energy,2)+calib_par[3]*pow(energy,3);
+		return 1000./calib_polynome;
+	}
 }
 
 void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
@@ -735,6 +761,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	*tot_area=0;
 	h=vect_time_int[1]-vect_time_int[0];
 	nb_1sec=1+(int)1./h;
+	nb_1sec=2;
 	for(int i=2;i<count_int-1;i++)
 	{
 		if(i<2)
@@ -1026,7 +1053,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double yl2,yl1,yr1,yr2,h;
 	double dyl2,dyl1,dyr1,dyr2;
 	double test_signal;
-	double seuilC=40200.;
+	double seuilC=40400.;
 	double seuilS=5.E-4;
 	double max_time;
 
@@ -1141,8 +1168,8 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 			cout<<"Fin du signal à "<<vect_time_int[i]<<endl;
 			last_signal=vect_time_int[i];
 			signal_time[*tot_area][1]=vect_time_int[i];
-			if(i<count_int-nb_1sec)
-				signal_time[*tot_area][1]=vect_time_int[i+nb_1sec];
+			if(i<count_int-nb_1sec+1)
+				signal_time[*tot_area][1]=vect_time_int[i+nb_1sec-1];
 			else
 				signal_time[*tot_area][1]=vect_time_int[count_int-1];
 			mvt=asc;
@@ -1372,6 +1399,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		Profile->SetLineWidth(2);
 		Profile->SetStats(0);
 		Profile->Draw("same");
+		// Profile->Draw();
 		// TG_Prof_Exc->Write("TG_Prof_Exc");
 
 		PolNProfile->SetLineColor(4);
@@ -1660,7 +1688,7 @@ int main(int argc, char** argv)
 				SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
 				if(bool_print==1)
 					bool_print=2;
-				for(int iii=0;iii<N_STRIPS;iii++)
+				// for(int iii=0;iii<N_STRIPS;iii++)
 				// 	errrel<<PostSFB[iii]<<" ";
 				// errrel<<endl;
 
@@ -2115,7 +2143,7 @@ int main(int argc, char** argv)
 	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
 	for(int i=0;i<tot_area;i++)
 		cout<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
-		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Carge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
+		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Charge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 
 	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge partielle : "<<chargeOverT<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
 
@@ -2341,7 +2369,7 @@ int main(int argc, char** argv)
 	Profil_y->GetYaxis()->CenterTitle();
 	Profil_y->GetYaxis()->SetLabelSize(0.02);
 	Profil_y->Draw();
-	cMap->SaveAs("Picture/Image.png");
+	cMap->SaveAs("Picture/Fluence_reconstruction.png");
 	
 	rootfile->Write();
 	TH2_Map->Delete();
