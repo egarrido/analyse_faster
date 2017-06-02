@@ -2610,7 +2610,10 @@ int main(int argc, char** argv)
 
 	// errrel.close();
 	if(logfileprint==true)
+	{
 		logfile.close();
+		cout<<"Fichier log généré"<<endl;
+	}
 
 	char Execution[80];
 	sprintf(Execution,"rm -f -r %s",data_folder.c_str());
