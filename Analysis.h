@@ -1,7 +1,6 @@
 #include "TFile.h"
 #include "TStyle.h"
 #include "TSystem.h"
-#include "Riostream.h"
 #include "TH1F.h"
 #include "TH2F.h"
 #include "TH3F.h"
@@ -45,6 +44,9 @@
 #include "Seuil_data.h"
 #include "Calibrage_data.h"
 
+std::ofstream logfile;
+const bool logfileprint=true;
+
 std::vector<string> Variable_init;
 std::vector<double> Value_init;
 
@@ -58,6 +60,8 @@ std::vector<long int> Vect_calib_quanta;
 string data_folder;
 string data_faster_file;
 string data_audio_file;
+
+const double epsilon=1.E-9;
 
 const int N_box_per_irradation_max=5000;
 const int N_STRIPS=32;
@@ -88,8 +92,9 @@ int borne_M_y=17;
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;
 // const double SamplingTime=1.;
-double SamplingTime=1.;
+int IntegrationStep;
 int nbSummedSample;
+double SamplingTime=1.;
 const double default_offset=0.419;		// 0.418   pC
 const double defaultRange_pC=24;    	// 24   pC
 const double sizeStrip=0.3; 					// 0.3 cm

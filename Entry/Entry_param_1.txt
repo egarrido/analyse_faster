@@ -1,9 +1,11 @@
-File: C_10000_position_pt_1_0001.fast
+File: C_1000_position_pt_1_0001.fast
 Path for the file: /home/garrido/Dosion/Cyrce_04_2017/
 Background extraction (yes/no sub/function/default): function
 Irradiation area finding way (charge/derivative): charge
+Threshold (pC): 40200.
 Exclusion strips X: 13 21
 Exclusion strips Y: 13 21 
 Calibrate particle: proton_Cyrce
 Particle energy: 0.
 Time sampling (s): 1.
+Integration steps: 50

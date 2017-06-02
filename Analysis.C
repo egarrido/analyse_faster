@@ -40,6 +40,10 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	7
 	Variable_init.push_back("Particle energy");
 	Value_init.push_back(0.);	//	8
+	Variable_init.push_back("Threshold (pC)");
+	Value_init.push_back(0.);	//	9
+	Variable_init.push_back("Integration steps");
+	Value_init.push_back(50);	//	10
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -115,7 +119,7 @@ void EntryParameters(int config_simu)
 							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"; new value: "<<value<<endl;
 						Value_init[ind_value]=value;
 					}
-					if(ind_value==4)
+					if(ind_value==4||ind_value==10)
 					{
 						value=(double)atof(buffer.c_str());
 						if(value==Value_init[ind_value])
@@ -148,6 +152,15 @@ void EntryParameters(int config_simu)
 							Value_init[ind_value]=0;
 						if(!buffer.compare("charge"))
 							Value_init[ind_value]=1;
+					}
+					if(ind_value==9)
+					{
+						value=(double)atof(buffer.c_str());
+						if(value==Value_init[ind_value])
+							cout<<Variable_init[ind_value]<<" default value keeped: "<<Value_init[ind_value]<<endl;
+						else	
+							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"; new value: "<<value<<endl;
+						Value_init[ind_value]=value;
 					}
 				}	
 				else
@@ -225,19 +238,83 @@ void EntryParameters(int config_simu)
 	ivar=4;
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 
+	ivar=10;
+	cout<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
+
 	ivar=7;
 	if(Value_init[ivar]==0)
-		cout<<" Derivative charge method used"<<endl;
+		cout<<" Derivative charge method used with a threshold of "<<Value_init[9]<<endl;
 	if(Value_init[ivar]==1)
-		cout<<" Charge method used"<<endl;
+		cout<<" Charge method used with a threshold of "<<Value_init[9]<<" pC"<<endl;
 	area_find_param=Value_init[ivar];
-	
+
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
 	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 	cout<<"=================================================="<<endl;
 	cout<<endl;
 
+	if(logfileprint==true)
+	{
+		logfile.open("Analysis.log",std::ios::out);
+
+		logfile<<endl;
+		logfile<<"=================================================="<<endl;
+		logfile<<" Parameters for the initialisation; config: "<<config_simu<<endl;
+		logfile<<"--------------------------------------------------"<<endl;
+		logfile<<" File of data: "<<data_faster_file<<endl;
+
+		ivar=2;
+		if(Value_init[ivar]==0)
+			logfile<<" No background extraction, default values used"<<endl;
+		if(Value_init[ivar]==1)
+			logfile<<" Background extraction"<<endl;
+		if(Value_init[ivar]==2)
+			logfile<<" No background substraction"<<endl;
+		if(Value_init[ivar]==3)
+		{
+			logfile<<" Background substraction using function"<<endl;
+			logfile<<" Exclusion strips for X: "<<borne_m_x<<" - "<<borne_M_x<<endl;
+			logfile<<" Exclusion strips for Y: "<<borne_m_y<<" - "<<borne_M_y<<endl;
+		}
+		bkgnd_param=Value_init[ivar];
+		
+		ivar=3;
+		if(Value_init[ivar]==0)
+			logfile<<" No calibration value"<<endl;
+		if(Value_init[ivar]==1)
+			logfile<<" Cyrce calibration values used"<<endl;
+		if(Value_init[ivar]==2)
+			logfile<<" Arronax calibration values used"<<endl;
+		calibrage_used=Value_init[ivar];
+
+		ivar=8;
+		if(Value_init[ivar]==0)
+			logfile<<" Multiple energies for primary particles"<<endl;
+		else
+			logfile<<" Energy of the particles: "<<Value_init[ivar]<<endl;
+		calibrage_used=Value_init[ivar];
+
+		ivar=4;
+		logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+
+		ivar=10;
+		logfile<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
+
+		ivar=7;
+		if(Value_init[ivar]==0)
+			logfile<<" Derivative charge method used with a threshold of "<<Value_init[9]<<endl;
+		if(Value_init[ivar]==1)
+			logfile<<" Charge method used with a threshold of "<<Value_init[9]<<" pC"<<endl;
+		area_find_param=Value_init[ivar];
+
+		// for(ivar=4;ivar<Variable_init.size();ivar++)
+		// 	logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+		logfile<<"=================================================="<<endl;
+		logfile<<endl;
+	}
+
 	SamplingTime=Value_init[4];
+	IntegrationStep=(int)Value_init[10];
 	if(bkgnd_param==3)
 		data_folder="Output/"+data_file+".function";
 	else
@@ -385,6 +462,13 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 		cout<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
 		cout<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 
+		if(logfileprint==true)
+		{
+			logfile<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
+			logfile<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
+			logfile<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+		}
+
 		Vect_calib_factor.push_back(calib_factor);
 		Vect_calib_charge.push_back(chargeTot_pC);
 		Vect_calib_quanta.push_back(quanta);
@@ -491,6 +575,8 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				quanta/=decimation;
 				calib_factor=vect_charge_t[current_area]/quanta;
 				cout<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+				if(logfileprint==true)
+					logfile<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 
 				Vect_calib_factor[current_area]=calib_factor;
 				Vect_calib_charge[current_area]=vect_charge_t[current_area];
@@ -512,7 +598,6 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	electrometer_data electro;
 	reader=faster_file_reader_open(file);
 
-	int k=0;
 	int label;
 	int signal_eoff=0;
 	int count_X=0;
@@ -591,8 +676,8 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 		}
 
 	TCanvas *cEOff = new TCanvas("Electronique offset");
-	cEOff->SetCanvasSize(1000,500);
-	cEOff->Divide(1,2);
+	cEOff->SetCanvasSize(2000,1000);
+	cEOff->Divide(2,2);
 	TH1F *hEOffX = new TH1F("hEOffX","Electronique offset for X strips",N_STRIPS,.5,32.5);
 	TH1F *hEOffY = new TH1F("hEOffY","Electronique offset for Y strips",N_STRIPS,.5,32.5);
 	for(int i=0;i<N_STRIPS;i++)
@@ -605,11 +690,14 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 		hEOffY->SetBinContent(i+1,EOffY[i]);
 		// cout<<EOffX[i]<<" "<<EOffY[i]<<endl;
 	}
+	TH1F *hEOffXZ=(TH1F*)hEOffX->Clone();
+	TH1F *hEOffYZ=(TH1F*)hEOffY->Clone();
+
 	cEOff->cd(1);
 	hEOffX->SetFillColor(2);
 	hEOffX->GetXaxis()->SetTickSize(0.01);
 	hEOffX->GetXaxis()->SetNdivisions(N_STRIPS);
-	hEOffX->GetXaxis()->SetTitle("Strip");
+	// hEOffX->GetXaxis()->SetTitle("Strip");
 	hEOffX->GetXaxis()->CenterTitle();
 	hEOffX->GetXaxis()->SetTickSize(0.01);
 	hEOffX->GetXaxis()->SetTitleSize(0.06);
@@ -625,11 +713,34 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	hEOffX->SetStats(0);
 	hEOffX->Draw("b");
 	hEOffX->Write("EOffX");
+
+	cEOff->cd(3);
+	hEOffXZ->SetFillColor(4);
+	hEOffXZ->SetTitle("");
+	hEOffXZ->GetXaxis()->SetTickSize(0.01);
+	hEOffXZ->GetXaxis()->SetNdivisions(N_STRIPS);
+	hEOffXZ->GetXaxis()->SetTitle("Strip");
+	hEOffXZ->GetXaxis()->CenterTitle();
+	hEOffXZ->GetXaxis()->SetTickSize(0.01);
+	hEOffXZ->GetXaxis()->SetTitleSize(0.06);
+	hEOffXZ->GetXaxis()->SetLabelSize(0.05);
+	hEOffXZ->GetYaxis()->SetTickSize(0.01);
+	hEOffXZ->GetYaxis()->SetTitle("Charge (pC)");
+	hEOffXZ->GetYaxis()->CenterTitle();
+	hEOffXZ->GetYaxis()->SetTickSize(0.01);
+	hEOffXZ->GetYaxis()->SetTitleSize(0.06);
+	hEOffXZ->GetYaxis()->SetLabelSize(0.05);
+	hEOffXZ->SetBarWidth(0.8);
+	hEOffXZ->SetBarOffset(0.1);
+	hEOffXZ->SetStats(0);
+	hEOffXZ->GetYaxis()->SetRangeUser(hEOffXZ->GetBinContent(hEOffXZ->GetMinimumBin())/1.01,hEOffXZ->GetBinContent(hEOffXZ->GetMaximumBin())*1.01);
+	hEOffXZ->Draw("b");
+
 	cEOff->cd(2);
-	hEOffY->SetFillColor(4);
+	hEOffY->SetFillColor(2);
 	hEOffY->GetXaxis()->SetTickSize(0.01);
 	hEOffY->GetXaxis()->SetNdivisions(N_STRIPS);
-	hEOffY->GetXaxis()->SetTitle("Strip");
+	// hEOffY->GetXaxis()->SetTitle("Strip");
 	hEOffY->GetXaxis()->CenterTitle();
 	hEOffY->GetXaxis()->SetTickSize(0.01);
 	hEOffY->GetXaxis()->SetTitleSize(0.06);
@@ -645,10 +756,34 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	hEOffY->SetStats(0);
 	hEOffY->Draw("b");
 	hEOffY->Write("EOffY");
+
+	cEOff->cd(4);
+	hEOffYZ->SetFillColor(4);
+	hEOffYZ->SetTitle("");
+	hEOffYZ->GetXaxis()->SetTickSize(0.01);
+	hEOffYZ->GetXaxis()->SetNdivisions(N_STRIPS);
+	hEOffYZ->GetXaxis()->SetTitle("Strip");
+	hEOffYZ->GetXaxis()->CenterTitle();
+	hEOffYZ->GetXaxis()->SetTickSize(0.01);
+	hEOffYZ->GetXaxis()->SetTitleSize(0.06);
+	hEOffYZ->GetXaxis()->SetLabelSize(0.05);
+	hEOffYZ->GetYaxis()->SetTickSize(0.01);
+	hEOffYZ->GetYaxis()->SetTitle("Charge (pC)");
+	hEOffYZ->GetYaxis()->CenterTitle();
+	hEOffYZ->GetYaxis()->SetTickSize(0.01);
+	hEOffYZ->GetYaxis()->SetTitleSize(0.06);
+	hEOffYZ->GetYaxis()->SetLabelSize(0.05);
+	hEOffYZ->SetBarWidth(0.8);
+	hEOffYZ->SetBarOffset(0.1);
+	hEOffYZ->SetStats(0);
+	hEOffYZ->GetYaxis()->SetRangeUser(hEOffYZ->GetBinContent(hEOffYZ->GetMinimumBin())/1.01,hEOffYZ->GetBinContent(hEOffYZ->GetMaximumBin())*1.01);
+	hEOffYZ->Draw("b");
 	cEOff->SaveAs("Picture/Offset_electronique.png");
 
 	hEOffX->Delete();
 	hEOffY->Delete();
+	hEOffXZ->Delete();
+	hEOffYZ->Delete();
 	cEOff->Destructor();
 
 	ofstream eoff_file("Offset.txt",std::ios::out);
@@ -676,7 +811,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	int count_moy=0;
 	int nb_1sec=0;
 	int last_i=0;
-	int integration=50;
+	int integration=IntegrationStep;
 	double t0;
 	double fasterTime;
 	double first_signal;
@@ -691,7 +826,8 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double yl2,yl1,yr1,yr2,h;
 	double dyl2,dyl1,dyr1,dyr2;
 	double test_signal;
-	double seuilD=50.;
+	// double seuilD=50.;
+	double seuilD=Value_init[9];
 	double seuilS=5.E-4;
 	double max_time;
 
@@ -1039,7 +1175,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	int count_int=0;
 	int nb_1sec=0;
 	int last_i=0;
-	int integration=50;
+	int integration=IntegrationStep;
 	double t0;
 	double fasterTime;
 	double first_signal;
@@ -1051,10 +1187,8 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double charge_Y=0.;
 	double charge_Y_int=0.;
 	double yl2,yl1,yr1,yr2,h;
-	double dyl2,dyl1,dyr1,dyr2;
-	double test_signal;
-	double seuilC=40400.;
-	double seuilS=5.E-4;
+	// double seuilC=40200.;
+	double seuilC=Value_init[9];
 	double max_time;
 
 	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -1478,11 +1612,6 @@ int main(int argc, char** argv)
 	int in_area=0;
 	int isLabelX=0;
 	int isLabelY=0;
-	int isBoth=0;
-	int nIntegration=0;
-	int nbdfX=0;
-	int nbdfY=0;
-	int signal=0;
 	int tot_area=0;
 	int count_area=0;
 	int bin_up=1000;
@@ -1507,14 +1636,12 @@ int main(int argc, char** argv)
 	double rms_y;
 	double min;
 	double max;
-	double chargeInt;
 	double calib_factor;
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
 	double chargeOverT=0.;
 	double Threshold=0.05;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
-	double offset=25.;
 	double factor_eoff=.00001;
 	double EOffX[N_STRIPS];
 	double EOffY[N_STRIPS];
@@ -1530,13 +1657,14 @@ int main(int argc, char** argv)
 	double ProfilY[N_STRIPS];
 	double vect_time_spl[MAX_SMPL];
 	double vect_charge_t_spl[MAX_SMPL];
-	double vect_ampl_spl[MAX_SMPL];
 	double vect_mean_x[MAX_SMPL];
 	double vect_mean_y[MAX_SMPL];
 	double vect_rms_x[MAX_SMPL];
 	double vect_rms_y[MAX_SMPL];
 	double vect_ampl_area[MAX_SMPL];
 	double vect_charge_t_area[MAX_SMPL];
+	double vect_charge_x_area[MAX_SMPL];
+	double vect_charge_y_area[MAX_SMPL];
 	double vect_mean_x_area[MAX_SMPL];
 	double vect_mean_y_area[MAX_SMPL];
 	double vect_rms_x_area[MAX_SMPL];
@@ -1599,11 +1727,14 @@ int main(int argc, char** argv)
 	}
 	cout<<tot_area<<" période(s) d'irradiation"<<endl;
 	for(int i=0;i<tot_area;i++)
+	{
 		cout<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<endl;
+		if(logfileprint==true)
+			logfile<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<endl;
+	}
 
 	nbSummedSample=0;
 	count_area=0;
-	chargeInt=0.;
 	t0=-1; 
 
 	for(int j=0;j<N_STRIPS;j++)
@@ -1881,6 +2012,8 @@ int main(int argc, char** argv)
 				}
 				
 				vect_charge_t_area[count_area]=(sum_x+sum_y)/2.;
+				vect_charge_x_area[count_area]=sum_x;
+				vect_charge_y_area[count_area]=sum_y;
 				vect_ampl_area[count_area]=TH2_Area->GetBinContent(TH2_Area->GetMaximumBin());
 
 				TCanvas *cArea= new TCanvas("Dose map");
@@ -2093,14 +2226,6 @@ int main(int argc, char** argv)
 					}
 					vect_mean_x[nbSummedSample]=mean_x;
 					vect_rms_x[nbSummedSample]=rms_x;
-					// ampl=Profil_x_smpl->GetBinContent(Profil_x_smpl->GetMaximumBin());
-					// GaussProfilX->SetParameters(ampl,mean_x,rms_x);
-					// i_cx=TMath::Max(2,Profil_x_smpl->GetMaximumBin()-5);
-					// i_cy=TMath::Min(Profil_x_smpl->GetNbinsX()-2,Profil_x_smpl->GetMaximumBin()+5);
-					// Profil_x_smpl->Fit(GaussProfilX,"Q","",i_cx,i_cy);
-					// Profil_x_smpl->Fit(GaussProfilX,"QR");
-					// vect_mean_x[nbSummedSample]=GaussProfilX->GetParameter(1);
-					// vect_rms_x[nbSummedSample]=GaussProfilX->GetParameter(2);
 					GaussProfilX->Delete();
 					spect_x_smpl->Delete();
 
@@ -2113,14 +2238,6 @@ int main(int argc, char** argv)
 					}
 					vect_mean_y[nbSummedSample]=mean_y;
 					vect_rms_y[nbSummedSample]=rms_y;
-					// ampl=Profil_y_smpl->GetBinContent(Profil_y_smpl->GetMaximumBin());
-					// GaussProfilY->SetParameters(ampl,mean_y,rms_y);
-					// i_cx=TMath::Max(2,Profil_y_smpl->GetMaximumBin()-5);
-					// i_cy=TMath::Min(Profil_y_smpl->GetNbinsX()-2,Profil_x_smpl->GetMaximumBin()+5);
-					// Profil_y_smpl->Fit(GaussProfilY,"Q","",i_cx,i_cy);
-					// Profil_y_smpl->Fit(GaussProfilY,"QR");
-					// vect_mean_y[nbSummedSample]=GaussProfilY->GetParameter(1);
-					// vect_rms_y[nbSummedSample]=GaussProfilY->GetParameter(2);
 					GaussProfilY->Delete();
 					spect_y_smpl->Delete();
 
@@ -2129,10 +2246,6 @@ int main(int argc, char** argv)
 					Profil_x_smpl->Delete();
 					Profil_y_smpl->Delete();
 					nbSummedSample++;
-					// vect_mean_x[nbSummedSample]=mean_x;
-					// vect_rms_x[nbSummedSample]=rms_x;
-					// vect_mean_y[nbSummedSample]=mean_y;
-					// vect_rms_y[nbSummedSample]=rms_y;
 				}
 				t1=fasterTime;
 			}
@@ -2142,9 +2255,13 @@ int main(int argc, char** argv)
 
 	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
 	for(int i=0;i<tot_area;i++)
+	{
 		cout<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
 		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Charge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
-
+		if(logfileprint==true)
+			logfile<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
+			<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Charge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
+	}
 	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge partielle : "<<chargeOverT<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
 
 	TH2F* TH2_Map=new TH2F("TH2_Map","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
@@ -2469,13 +2586,11 @@ int main(int argc, char** argv)
 	TG_Rms_y->Delete();
 
 	if(data_calib==1&&tot_area>0)
-		// Calibrage(filename,chargeTot_pC);
 		Calibrage(filename,chargeTot_signal_X,chargeTot_signal_Y);
 	else
 		cout<<"Pas de données de calibrage"<<endl;
 
 	if(data_meas==1&&tot_area>1)
-		// Calibrage(filename,chargeTot_pC);
 		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area);
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
@@ -2485,12 +2600,17 @@ int main(int argc, char** argv)
 	// 	for(int i=0;i<Vect_calib_factor.size();i++)
 	// 		cout<<Vect_calib_factor[i]*1000<<" "<<Vect_calib_charge[i]<<" "<<Vect_calib_quanta[i]<<endl;
 	// }
+	for(int i=0;i<tot_area;i++)
+		cout<<"i "<<vect_charge_t_area[i]<<"; X "<<vect_charge_x_area[i]<<"; Y "<<vect_charge_y_area[i]<<endl;
 
 	printf("Images générées\n");
 	faster_file_reader_close(reader);
 	free(filename);
 	rootfile->Close();
+
 	// errrel.close();
+	if(logfileprint==true)
+		logfile.close();
 
 	char Execution[80];
 	sprintf(Execution,"rm -f -r %s",data_folder.c_str());
@@ -2501,6 +2621,11 @@ int main(int argc, char** argv)
 	system(Execution);
 	sprintf(Execution,"cp Output/PostAnalysis.root %s/",data_folder.c_str());
 	system(Execution);
+	if(logfileprint==true)
+	{
+		sprintf(Execution,"cp Analysis.log %s/",data_folder.c_str());
+		system(Execution);
+	}
 
 	return EXIT_SUCCESS;
 }
