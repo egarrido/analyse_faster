@@ -43,6 +43,9 @@
 
 #include "Seuil_data.h"
 #include "Calibrage_data.h"
+// #include "Label_Arronax.h"
+#include "Label_CPO.h"
+// #include "Label_Cyrce.h"
 
 std::ofstream logfile;
 const bool logfileprint=true;
@@ -71,14 +74,6 @@ const int MAX_PEAK=10;
 const int MAX_SMPL=1000;
 const int MAX_INTEGR=1000000;
 
-// Manip Mai 2014 : X->4 Y->6 Scaler->1009
-const int LabelX=4;
-const int LabelY=6;
-const int LabelScaler=7;
-const int LabelCount=1007;
-const int LabelHVp=102;
-const int LabelHVn=101;
-
 int bkgnd_param=0;
 int calibrage_used=0;
 int area_find_param=0;
@@ -88,6 +83,8 @@ int borne_m_x=16;
 int borne_M_x=17;
 int borne_m_y=16;
 int borne_M_y=17;
+double bound_min=30.;
+double bound_max=60.;
 
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;

@@ -9,6 +9,7 @@ void EntryParameters(int config_simu)
 	string indice=ss.str();
 	stringstream ss2;
 	int n;
+	double m;
 
 	int iint;
 	int ichar;
@@ -22,28 +23,30 @@ void EntryParameters(int config_simu)
 
 	Variable_init.clear();
 	Value_init.clear();
-	Variable_init.push_back("File");
+	Variable_init.push_back("File"); // 0
 	Value_init.push_back(0.);	//	0
-	Variable_init.push_back("Path for the file");
+	Variable_init.push_back("Path for the file"); // 1
 	Value_init.push_back(0.);	//	1
-	Variable_init.push_back("Background extraction (yes/no sub/function/default)");
+	Variable_init.push_back("Background extraction (yes/no sub/function/default)"); // 2
 	Value_init.push_back(0.);	//	2
-	Variable_init.push_back("Calibrate particle");
+	Variable_init.push_back("Calibrate particle"); // 3
 	Value_init.push_back(0.);	//	3
-	Variable_init.push_back("Time sampling (s)");
+	Variable_init.push_back("Time sampling (s)"); // 4
 	Value_init.push_back(0.);	//	4
 	Variable_init.push_back("Exclusion strips X"); // 5
 	Value_init.push_back(0.);	//	5
 	Variable_init.push_back("Exclusion strips Y"); // 6
 	Value_init.push_back(0.);	//	6
-	Variable_init.push_back("Irradiation area finding way (charge/derivative)"); // 7
+	Variable_init.push_back("Irradiation area finding way (charge/derivative/quanta/manual)"); // 7
 	Value_init.push_back(0.);	//	7
-	Variable_init.push_back("Particle energy");
+	Variable_init.push_back("Particle energy"); // 8
 	Value_init.push_back(0.);	//	8
-	Variable_init.push_back("Threshold (pC)");
+	Variable_init.push_back("Threshold"); // 9
 	Value_init.push_back(0.);	//	9
-	Variable_init.push_back("Integration steps");
-	Value_init.push_back(50);	//	10
+	Variable_init.push_back("Integration steps"); // 10
+	Value_init.push_back(0.);	//	10
+	Variable_init.push_back("Boundaries"); // 11
+	Value_init.push_back(0.);	//	11
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -152,6 +155,19 @@ void EntryParameters(int config_simu)
 							Value_init[ind_value]=0;
 						if(!buffer.compare("charge"))
 							Value_init[ind_value]=1;
+						if(!buffer.compare("quanta"))
+							Value_init[ind_value]=2;
+						if(!buffer.compare("manual"))
+							Value_init[ind_value]=3;
+					}
+					if(ind_value==11)
+					{
+						ss2<<buffer;
+						ss2>>m;
+						bound_min=m;
+						ss2>>m;
+						bound_max=m;
+						ss2.clear();
 					}
 					if(ind_value==9)
 					{
@@ -246,6 +262,10 @@ void EntryParameters(int config_simu)
 		cout<<" Derivative charge method used with a threshold of "<<Value_init[9]<<endl;
 	if(Value_init[ivar]==1)
 		cout<<" Charge method used with a threshold of "<<Value_init[9]<<" pC"<<endl;
+	if(Value_init[ivar]==2)
+		cout<<" Quanta method used with a threshold of "<<Value_init[9]<<endl;
+	if(Value_init[ivar]==3)
+		cout<<" Irradiation manually defined ["<<bound_min<<" s;"<<bound_max<<" s]"<<endl;
 	area_find_param=Value_init[ivar];
 
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
@@ -305,6 +325,10 @@ void EntryParameters(int config_simu)
 			logfile<<" Derivative charge method used with a threshold of "<<Value_init[9]<<endl;
 		if(Value_init[ivar]==1)
 			logfile<<" Charge method used with a threshold of "<<Value_init[9]<<" pC"<<endl;
+		if(Value_init[ivar]==2)
+			logfile<<" Quanta method used with a threshold of "<<Value_init[9]<<endl;
+		if(Value_init[ivar]==3)
+			logfile<<" Irradiation manually defined ["<<bound_min<<" s;"<<bound_max<<" s]"<<endl;
 		area_find_param=Value_init[ivar];
 
 		// for(ivar=4;ivar<Variable_init.size();ivar++)
@@ -415,7 +439,7 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 		TG_dQuanta->SetMarkerColor(2);
 		TG_dQuanta->SetLineColor(2);
 		TG_dQuanta->SetLineWidth(1.5);
-		TG_dQuanta->SetTitle("Quanta and differential quanta over time");
+		TG_dQuanta->SetTitle("Differential quanta over time");
 		TG_dQuanta->GetHistogram()->SetTitleSize(0.035);
 		TG_dQuanta->GetXaxis()->SetTitle("Time (s)");
 		TG_dQuanta->GetXaxis()->SetTickSize(0.01);
@@ -434,7 +458,7 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 		TG_Quanta->SetMarkerColor(4);
 		TG_Quanta->SetLineColor(4);
 		TG_Quanta->SetLineWidth(1.5);
-		TG_Quanta->SetTitle("quanta over time");
+		TG_Quanta->SetTitle("Quanta over time");
 		TG_Quanta->GetHistogram()->SetTitleSize(0.035);
 		TG_Quanta->GetXaxis()->SetTitle("Time (s)");
 		TG_Quanta->GetXaxis()->SetTickSize(0.01);
@@ -1174,7 +1198,6 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	int count_tot=0;
 	int count_int=0;
 	int nb_1sec=0;
-	int last_i=0;
 	int integration=IntegrationStep;
 	double t0;
 	double fasterTime;
@@ -1293,7 +1316,6 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 				signal_time[*tot_area][0]=vect_time_int[i-nb_1sec];
 			else
 				signal_time[*tot_area][0]=vect_time_int[0];
-			last_i=i;
 			// i+=nb_1sec;
 			mvt=des;
 		}
@@ -1307,10 +1329,9 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 			else
 				signal_time[*tot_area][1]=vect_time_int[count_int-1];
 			mvt=asc;
-			last_i=i;
 			// i+=nb_1sec;
 			*tot_area=*tot_area+1;
-			signal_time[*tot_area][0]=signal_time[*tot_area-1][1]; //valeur refuge pour les double descentes
+			signal_time[*tot_area][0]=signal_time[*tot_area-1][1];
 			mvt=asc;
 		}
 	}
@@ -1373,7 +1394,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->Draw("AL");
 	max_time=vect_time_int[count_int-1];
 	TLine *line= new TLine();
-	line->SetLineColor(2);
+	line->SetLineColor(4);
 	line->DrawLine(0,seuilC,max_time,seuilC);
 
 	cCharge->cd(3);
@@ -1396,16 +1417,6 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 
 	cCharge->SaveAs("Picture/Charge.png");
 
-	// //§
-	// *tot_area=1;
-	// end_on=0;
-	// beg_on=0;
-	// signal_time[0][0]=21.;
-	// signal_time[0][1]=vect_time[count_tot]-21.;
-	// first_signal=signal_time[0][0];
-	// last_signal=signal_time[0][1];
-	// //§
-
 	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
 
 	TG_Charge->Delete();
@@ -1417,6 +1428,411 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_time_int);
 	free(vect_charge_int);
 	free(vect_dcharge_int);
+}
+
+void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
+{
+	faster_file_reader_p reader;
+	faster_data_p data;
+	electrometer_data electro;
+	scaler_counter scaler_cnt;
+	reader=faster_file_reader_open(file);
+	int label;
+	int mvt;
+	const int asc=0;
+	const int des=1;
+	int beg_on=0;
+	int end_on=0;
+	int isLabelX;
+	int isLabelY;
+	int count_tot=0;
+	int count_int=0;
+	int count_quanta=0;
+	int nb_1sec=0;
+	int integration=IntegrationStep;
+	long int last_quanta=-1;
+	long int dquanta=-1;
+	double t0;
+	double fasterTime;
+	double first_signal;
+	double last_signal;
+	double charge;
+	double chargeTot_pC=0.;
+	double charge_X=0.;
+	double charge_X_int=0.;
+	double charge_Y=0.;
+	double charge_Y_int=0.;
+	double seuilQ=Value_init[9];
+
+	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_time_q=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_charge=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_dquanta=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_time_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_charge_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+
+	t0=-1;
+	while((data=faster_file_reader_next(reader))!=NULL) 
+	{
+		label=faster_data_label(data);
+		if(label==LabelCount)
+		{
+			faster_data_load(data,&scaler_cnt);
+			if(t0==-1)
+				t0=faster_data_clock_sec(data);
+			fasterTime=faster_data_clock_sec(data)-t0;
+			vect_time_q[count_quanta]=fasterTime;
+			if(last_quanta==-1)
+				last_quanta=scaler_cnt.quanta;
+			dquanta=scaler_cnt.quanta-last_quanta;
+			last_quanta=scaler_cnt.quanta;
+			vect_dquanta[count_quanta]=dquanta;
+			count_quanta++;
+		}
+
+		if(label==LabelX||label==LabelY)
+		{
+			if(t0==-1)
+				t0=faster_data_clock_sec(data);
+			faster_data_load(data,&electro);
+			fasterTime=faster_data_clock_sec(data)-t0;
+			for(int j=0;j<N_STRIPS;j++) 
+			{
+				charge=electrometer_channel_charge_pC(electro,j+1);
+				switch(label) 
+				{
+					case LabelX:
+						charge_X+=charge;
+						isLabelX=1;
+					break;
+					case LabelY:
+						charge_Y+=charge;
+						isLabelY=1;
+					break;
+				}
+			}
+			if(isLabelX==1&&isLabelY==1)
+			{
+				chargeTot_pC+=(charge_X+charge_Y)/2.;
+				charge_X_int+=charge_X;
+				charge_Y_int+=charge_Y;
+				vect_charge[count_tot]=(charge_X+charge_Y)/2.;
+				// vect_charge[count_tot]=charge_X;
+				vect_time[count_tot]=fasterTime;
+				charge_X=0.;
+				charge_Y=0.;
+				if(count_tot%integration==(integration-1))
+				{
+					vect_charge_int[count_int]=(charge_X_int+charge_Y_int)/2.;
+					vect_time_int[count_int]=fasterTime;
+					charge_X_int=0.;
+					charge_Y_int=0.;
+					count_int++;
+				}
+				count_tot++;
+				isLabelX=0;
+				isLabelY=0;
+			}
+		}
+	}
+	count_quanta--;
+	count_int--;
+	count_tot--;
+	faster_file_reader_close(reader);
+
+	if(count_quanta<1)
+	{
+		cout<<"Pas de données de quanta"<<endl;
+		*tot_area=0;
+		return;
+	}
+
+	mvt=asc;
+	first_signal=-1.;
+	*tot_area=0;
+	nb_1sec=2;
+	for(int i=0;i<count_quanta;i++)
+	{
+		if(vect_dquanta[i]>seuilQ&&mvt==asc)
+		{
+			cout<<"Début du signal à "<<vect_time_q[i]<<endl;
+			if(*tot_area==0)
+				first_signal=vect_time_q[i];
+			if(i>=nb_1sec)
+				signal_time[*tot_area][0]=vect_time_q[i-nb_1sec];
+			else
+				signal_time[*tot_area][0]=vect_time_q[0];
+			// i+=nb_1sec;
+			mvt=des;
+		}
+		if(vect_dquanta[i]<seuilQ&&mvt==des)
+		{
+			cout<<"Fin du signal à "<<vect_time_q[i]<<endl;
+			last_signal=vect_time_q[i];
+			signal_time[*tot_area][1]=vect_time_q[i];
+			if(i<count_quanta-nb_1sec+1)
+				signal_time[*tot_area][1]=vect_time_q[i+nb_1sec-1];
+			else
+				signal_time[*tot_area][1]=vect_time_q[count_quanta-1];
+			mvt=asc;
+			// i+=nb_1sec;
+			*tot_area=*tot_area+1;
+			signal_time[*tot_area][0]=signal_time[*tot_area-1][1];
+			mvt=asc;
+		}
+	}
+
+	if(mvt==des)
+	{
+		cout<<"Attention, le fichier se termine sur du signal On"<<endl;
+		signal_time[*tot_area][1]=vect_time_int[count_quanta-1];
+		*tot_area=*tot_area+1;
+		last_signal=-1.;
+		end_on=1;
+	}
+
+	if(first_signal<2.&&*tot_area>0)
+	{
+		cout<<"Attention, il semblerait que le fichier débute sur du signal On, premier signal à : "<<first_signal<<endl;
+		signal_time[0][0]=vect_time_int[0];
+		first_signal=vect_time_int[0];
+		beg_on=1;
+	}
+
+	TCanvas *cCharge= new TCanvas("Charge over time");
+	cCharge->SetCanvasSize(1000,750);
+	cCharge->Divide(1,3);
+
+	cCharge->cd(1);
+	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
+	TG_Charge->SetMarkerColor(2);
+	TG_Charge->SetLineColor(2);
+	TG_Charge->SetLineWidth(1.5);
+	TG_Charge->SetTitle("Charge total over time");
+	TG_Charge->GetXaxis()->SetTitle("Time (s)");
+	TG_Charge->GetXaxis()->SetTickSize(0.01);
+	TG_Charge->GetXaxis()->SetTitleSize(0.06);
+	TG_Charge->GetXaxis()->SetLabelSize(0.05);
+	TG_Charge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge->GetYaxis()->SetTickSize(0.01);
+	TG_Charge->GetYaxis()->SetTitleSize(0.06);
+	TG_Charge->GetYaxis()->CenterTitle();
+	TG_Charge->GetYaxis()->SetLabelSize(0.05);
+	TG_Charge->Write("Charge");
+	TG_Charge->Draw("AL");
+
+	cCharge->cd(2);
+	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
+	TG_Charge_int->SetMarkerColor(2);
+	TG_Charge_int->SetLineColor(2);
+	TG_Charge_int->SetLineWidth(1.5);
+	TG_Charge_int->SetTitle("Charge over time");
+	TG_Charge_int->GetXaxis()->SetTitle("Time (s)");
+	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
+	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
+	TG_Charge_int->GetXaxis()->SetLabelSize(0.05);
+	TG_Charge_int->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge_int->GetYaxis()->SetTickSize(0.01);
+	TG_Charge_int->GetYaxis()->SetTitleSize(0.06);
+	TG_Charge_int->GetYaxis()->CenterTitle();
+	TG_Charge_int->GetYaxis()->SetLabelSize(0.05);
+	TG_Charge_int->Write("Charge int");
+	TG_Charge_int->Draw("AL");
+
+	cCharge->cd(3);
+	TGraph *TG_dQuanta=new TGraph(count_quanta,vect_time_q,vect_dquanta);
+	TG_dQuanta->SetMarkerColor(4);
+	TG_dQuanta->SetLineColor(4);
+	TG_dQuanta->SetLineWidth(1.5);
+	TG_dQuanta->SetTitle("Differential quanta over time");
+	TG_dQuanta->GetHistogram()->SetTitleSize(0.035);
+	TG_dQuanta->GetXaxis()->SetTitle("Time (s)");
+	TG_dQuanta->GetXaxis()->SetTickSize(0.01);
+	TG_dQuanta->GetXaxis()->SetTitleSize(0.06);
+	TG_dQuanta->GetXaxis()->SetLabelSize(0.05);
+	TG_dQuanta->GetYaxis()->SetTitle("dQuanta");
+	TG_dQuanta->GetYaxis()->SetTickSize(0.01);
+	TG_dQuanta->GetYaxis()->SetTitleSize(0.06);
+	TG_dQuanta->GetYaxis()->CenterTitle();
+	TG_dQuanta->GetYaxis()->SetLabelSize(0.05);
+	TG_dQuanta->Write("dQuanta");
+	TG_dQuanta->Draw("AL");
+	TLine *line= new TLine();
+	line->SetLineColor(2);
+	line->DrawLine(0,seuilQ,vect_time_q[count_quanta-1],seuilQ);
+
+	cCharge->SaveAs("Picture/Charge.png");
+
+	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
+
+	TG_Charge->Delete();
+	TG_Charge_int->Delete();
+	TG_dQuanta->Delete();
+	cCharge->Destructor();
+	free(vect_time);
+	free(vect_time_q);
+	free(vect_charge);
+	free(vect_time_int);
+	free(vect_charge_int);
+	free(vect_dquanta);
+}
+
+void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
+{
+	faster_file_reader_p reader;
+	faster_data_p data;
+	electrometer_data electro;
+	reader=faster_file_reader_open(file);
+	int label;
+	int mvt;
+	int beg_on=0;
+	int end_on=0;
+	int isLabelX;
+	int isLabelY;
+	int count_tot=0;
+	int count_int=0;
+	int integration=IntegrationStep;
+	double t0;
+	double fasterTime;
+	double first_signal;
+	double last_signal;
+	double charge;
+	double chargeTot_pC=0.;
+	double charge_X=0.;
+	double charge_X_int=0.;
+	double charge_Y=0.;
+	double charge_Y_int=0.;
+
+	double* vect_time=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_charge=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_time_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_charge_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+
+	t0=-1;
+	while((data=faster_file_reader_next(reader))!=NULL) 
+	{
+		label=faster_data_label(data);
+		if(label==LabelX||label==LabelY)
+		{
+			if(t0==-1)
+				t0=faster_data_clock_sec(data);
+			faster_data_load(data,&electro);
+			fasterTime=faster_data_clock_sec(data)-t0;
+			for(int j=0;j<N_STRIPS;j++) 
+			{
+				charge=electrometer_channel_charge_pC(electro,j+1);
+				switch(label) 
+				{
+					case LabelX:
+						charge_X+=charge;
+						isLabelX=1;
+					break;
+					case LabelY:
+						charge_Y+=charge;
+						isLabelY=1;
+					break;
+				}
+			}
+			if(isLabelX==1&&isLabelY==1)
+			{
+				chargeTot_pC+=(charge_X+charge_Y)/2.;
+				charge_X_int+=charge_X;
+				charge_Y_int+=charge_Y;
+				vect_charge[count_tot]=(charge_X+charge_Y)/2.;
+				// vect_charge[count_tot]=charge_X;
+				vect_time[count_tot]=fasterTime;
+				charge_X=0.;
+				charge_Y=0.;
+				if(count_tot%integration==(integration-1))
+				{
+					vect_charge_int[count_int]=(charge_X_int+charge_Y_int)/2.;
+					vect_time_int[count_int]=fasterTime;
+					charge_X_int=0.;
+					charge_Y_int=0.;
+					count_int++;
+				}
+				count_tot++;
+				isLabelX=0;
+				isLabelY=0;
+			}
+		}
+	}
+	count_int--;
+	count_tot--;
+	faster_file_reader_close(reader);
+
+	if(bound_min<vect_time[0])
+	{
+		cout<<"Mauvaise borne de début du signal : "<<bound_min<<" < "<<vect_time[0]<<endl;
+		cout<<"Redefinition du début du signal"<<endl;
+		bound_min=vect_time[0];
+		beg_on=1;
+	}
+
+	if(bound_max>vect_time[count_tot])
+	{
+		cout<<"Mauvaise borne de fin du signal : "<<bound_max<<" > "<<vect_time[count_tot]<<endl;
+		cout<<"Redefinition de la fin du signal"<<endl;
+		bound_max=vect_time[count_tot];
+		end_on=1;
+	}
+
+	TCanvas *cCharge= new TCanvas("Charge over time");
+	cCharge->SetCanvasSize(1000,500);
+	cCharge->Divide(1,2);
+
+	cCharge->cd(1);
+	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
+	TG_Charge->SetMarkerColor(2);
+	TG_Charge->SetLineColor(2);
+	TG_Charge->SetLineWidth(1.5);
+	TG_Charge->SetTitle("Charge total over time");
+	TG_Charge->GetXaxis()->SetTitle("Time (s)");
+	TG_Charge->GetXaxis()->SetTickSize(0.01);
+	TG_Charge->GetXaxis()->SetTitleSize(0.06);
+	TG_Charge->GetXaxis()->SetLabelSize(0.05);
+	TG_Charge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge->GetYaxis()->SetTickSize(0.01);
+	TG_Charge->GetYaxis()->SetTitleSize(0.06);
+	TG_Charge->GetYaxis()->CenterTitle();
+	TG_Charge->GetYaxis()->SetLabelSize(0.05);
+	TG_Charge->Write("Charge");
+	TG_Charge->Draw("AL");
+
+	cCharge->cd(2);
+	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
+	TG_Charge_int->SetMarkerColor(2);
+	TG_Charge_int->SetLineColor(2);
+	TG_Charge_int->SetLineWidth(1.5);
+	TG_Charge_int->SetTitle("Charge over time");
+	TG_Charge_int->GetXaxis()->SetTitle("Time (s)");
+	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
+	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
+	TG_Charge_int->GetXaxis()->SetLabelSize(0.05);
+	TG_Charge_int->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge_int->GetYaxis()->SetTickSize(0.01);
+	TG_Charge_int->GetYaxis()->SetTitleSize(0.06);
+	TG_Charge_int->GetYaxis()->CenterTitle();
+	TG_Charge_int->GetYaxis()->SetLabelSize(0.05);
+	TG_Charge_int->Write("Charge int");
+	TG_Charge_int->Draw("AL");
+
+	cCharge->SaveAs("Picture/Charge.png");
+
+	first_signal=bound_min;
+	last_signal=bound_max;
+	*tot_area=1;
+	signal_time[0][0]=bound_min;
+	signal_time[0][1]=bound_max;
+	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
+
+	TG_Charge->Delete();
+	TG_Charge_int->Delete();
+	cCharge->Destructor();
+	free(vect_time);
+	free(vect_charge);
+	free(vect_time_int);
+	free(vect_charge_int);
 }
 
 void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,double time,double *sum_val)
@@ -1717,8 +2133,12 @@ int main(int argc, char** argv)
 
 	if(area_find_param==0)
 		DerivativeSignalArea(filename,&tot_area,signal_time);
-	else	
+	if(area_find_param==1)
 		ChargeSignalArea(filename,&tot_area,signal_time);
+	if(area_find_param==2)
+		QuantaSignalArea(filename,&tot_area,signal_time);
+	if(area_find_param==3)
+		ManualSignalArea(filename,&tot_area,signal_time);
 	
 	if(tot_area>MAX_SMPL)
 	{
