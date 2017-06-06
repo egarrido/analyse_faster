@@ -1,9 +1,9 @@
-File: Calibration_2_0001.fast
+File: Calibration_4_0001.fast
 Path for the file: /home/garrido/Dosion/CPO_05_2017/
 Background extraction (yes/no sub/function/default): function
 Irradiation area finding way (charge/derivative/quanta/manual): quanta
 Boundaries: 30. 60.
-Threshold: 50
+Threshold: 100
 Exclusion strips X: 15 20
 Exclusion strips Y: 13 19 
 Calibrate particle: proton_Cyrce

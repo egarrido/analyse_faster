@@ -426,6 +426,8 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 			count_quanta++;
 		}
 	}
+	if(vect_time_q[0]<0.)
+		vect_time_q[0]=0.;
 	count_quanta--;
 	faster_file_reader_close(reader);
 	if(quanta>0)
@@ -531,7 +533,7 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 	long int quanta=0;
 	double calib_factor;
 
-	TH1F *hQth2th = new TH1F("hQth2th","Charge threshold to threshold",1000,0.,14000);
+	TH1F *hQth2th = new TH1F("hQth2th","Charge threshold to threshold",1000,0.,4000);
 
 	t0=-1;
 	// while((data=faster_file_reader_next(reader))!=NULL) 
@@ -1535,6 +1537,8 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 			}
 		}
 	}
+	if(vect_time_q[0]<0.)
+		vect_time_q[0]=0.;
 	count_quanta--;
 	count_int--;
 	count_tot--;
@@ -1544,6 +1548,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	{
 		cout<<"Pas de données de quanta"<<endl;
 		*tot_area=0;
+		ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
 		return;
 	}
 
@@ -1659,7 +1664,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_dQuanta->Draw("AL");
 	TLine *line= new TLine();
 	line->SetLineColor(2);
-	line->DrawLine(0,seuilQ,vect_time_q[count_quanta-1],seuilQ);
+	line->DrawLine(vect_time_q[0],seuilQ,vect_time_q[count_quanta-1],seuilQ);
 
 	cCharge->SaveAs("Picture/Charge.png");
 
@@ -2057,7 +2062,7 @@ int main(int argc, char** argv)
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
 	double chargeOverT=0.;
-	double Threshold=0.05;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
+	double Threshold=0.005;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double factor_eoff=.00001;
 	double EOffX[N_STRIPS];
 	double EOffY[N_STRIPS];
@@ -2275,9 +2280,8 @@ int main(int argc, char** argv)
 							val=charge-EOffX[j];
 							if(in_area==0)
 								chargeTot_signal_X+=val;
-							// val=TMath::Max(charge-EOffX[j],0.);
-							if(val<EOffX[j]*factor_eoff)
-								val=0.; 
+							// if(val<EOffX[j]*factor_eoff)
+							// 	val=0.; 
 							// ChX->SetAt(val*corrXY[j][0],j);
 							ChX->SetAt(val,j);
 							isLabelX=1;
@@ -2286,15 +2290,16 @@ int main(int argc, char** argv)
 							val=charge-EOffY[j];
 							if(in_area==0)
 								chargeTot_signal_Y+=val;
-							// val=TMath::Max(charge-EOffY[j],0.);
-							if(val<EOffY[j]*factor_eoff)
-								val=0.; 
+							// if(val<EOffY[j]*factor_eoff)
+							// 	val=0.; 
 							// ChY->SetAt(val*corrXY[j][1],j);
 							ChY->SetAt(val,j);
 							isLabelY=1;
 						break;
 					}
+					// errrel<<val<<" ";
 				}
+				// errrel<<endl;
 			}
 			if(isLabelX==1&&isLabelY==1)
 			{
@@ -2355,6 +2360,7 @@ int main(int argc, char** argv)
 					}
 					chargeOverT+=(sum_x+sum_y)/2.;
 				}
+				// errrel<<sum_x<<" "<<sum_y<<endl;
 				ChX->Reset();
 				ChY->Reset();
 				isLabelX=0;
@@ -3010,7 +3016,7 @@ int main(int argc, char** argv)
 	else
 		cout<<"Pas de données de calibrage"<<endl;
 
-	if(data_meas==1&&tot_area>1)
+	if(data_meas==1&&tot_area>0)
 		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area);
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
@@ -3020,8 +3026,8 @@ int main(int argc, char** argv)
 	// 	for(int i=0;i<Vect_calib_factor.size();i++)
 	// 		cout<<Vect_calib_factor[i]*1000<<" "<<Vect_calib_charge[i]<<" "<<Vect_calib_quanta[i]<<endl;
 	// }
-	for(int i=0;i<tot_area;i++)
-		cout<<"i "<<vect_charge_t_area[i]<<"; X "<<vect_charge_x_area[i]<<"; Y "<<vect_charge_y_area[i]<<endl;
+	// for(int i=0;i<tot_area;i++)
+	// 	cout<<"i "<<vect_charge_t_area[i]<<"; X "<<vect_charge_x_area[i]<<"; Y "<<vect_charge_y_area[i]<<endl;
 
 	printf("Images générées\n");
 	faster_file_reader_close(reader);
