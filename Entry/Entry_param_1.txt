@@ -9,4 +9,5 @@ Exclusion strips Y: 13 21
 Calibrate particle: proton_Cyrce
 Particle energy: 0.
 Time sampling (s): 1.
+Acquisition time for electronic offset: 20.
 Integration steps: 50

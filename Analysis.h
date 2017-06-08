@@ -85,6 +85,7 @@ int borne_m_y=16;
 int borne_M_y=17;
 double bound_min=30.;
 double bound_max=60.;
+double bound_eoff=20.;
 
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;

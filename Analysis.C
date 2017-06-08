@@ -47,6 +47,8 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	10
 	Variable_init.push_back("Boundaries"); // 11
 	Value_init.push_back(0.);	//	11
+	Variable_init.push_back("Acquisition time for electronic offset"); // 12
+	Value_init.push_back(0.);	//	12
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -169,7 +171,7 @@ void EntryParameters(int config_simu)
 						bound_max=m;
 						ss2.clear();
 					}
-					if(ind_value==9)
+					if(ind_value==9||ind_value==12)
 					{
 						value=(double)atof(buffer.c_str());
 						if(value==Value_init[ind_value])
@@ -257,6 +259,10 @@ void EntryParameters(int config_simu)
 	ivar=10;
 	cout<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
 
+	ivar=12;
+	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+	bound_eoff=Value_init[ivar];
+
 	ivar=7;
 	if(Value_init[ivar]==0)
 		cout<<" Derivative charge method used with a threshold of "<<Value_init[9]<<endl;
@@ -319,6 +325,9 @@ void EntryParameters(int config_simu)
 
 		ivar=10;
 		logfile<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
+
+		ivar=12;
+		logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 
 		ivar=7;
 		if(Value_init[ivar]==0)
@@ -631,7 +640,7 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	double charge;
 	double t0=-1;
 	double fasterTime;
-	double eoff_sample=20.;
+	double eoff_sample=bound_eoff;
 	double EOffX[N_STRIPS];
 	double EOffY[N_STRIPS];
 
@@ -1849,11 +1858,10 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	string indice=ss.str();
 	string name="Picture/SFB_"+indice+".png";
 
-	// int binl=12;
-	// int binr=23;
+	int i_par=9;
 	double scale_value;
 	double bdf_SFB;
-	double par[10];
+	double par[i_par];
 	double y_min;
 	double y_max;
 
@@ -1863,44 +1871,30 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	TGraph *TG_Post=new TGraph();
 	TGraph *TG_Visu=new TGraph();
 	TF1* SinProfile=new TF1("SinProfile","TMath::Sin(x)",2,31);
-	// TF1* PolNProfile=new TF1("PolNProfile","pol5",2,31);
 	TF1* PolNProfile=new TF1("PolNProfile","pol8",2,31);
-	// TF1* PolNProfile=new TF1("PolNProfile",fline,2,32);
 
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
-		// scale_value=(2.*(PreSFB[i]-min)/(max-min)-1.);
 		scale_value=PreSFB[i];
 		Profile->SetBinContent(i+1,PreSFB[i]);
-		// ProfExc->SetBinContent(i+1,scale_value);
 		if(i+1<=binl||i+1>=binr)
 		{
-			// PolNProfile->RejectPoint(kTRUE);
 			ProfExc->SetBinContent(i+1,scale_value);
 			TG_Prof_Exc->SetPoint(i,i+1,scale_value);
-			// ProfExc->SetBinError(i+1,0);
 		}
 	}
 	ProfExc->Fit(PolNProfile,"Q");
 
-	par[0]=PolNProfile->GetParameter(0);
-	par[1]=PolNProfile->GetParameter(1);
-	par[2]=PolNProfile->GetParameter(2);
-	par[3]=PolNProfile->GetParameter(3);
-	par[4]=PolNProfile->GetParameter(4);
-	par[5]=PolNProfile->GetParameter(5);
-	par[6]=PolNProfile->GetParameter(6);
-	par[7]=PolNProfile->GetParameter(7);
-	par[8]=PolNProfile->GetParameter(8);
-	// par[9]=PolNProfile->GetParameter(9);
+	for(int ii=0;ii<i_par;ii++)
+		par[ii]=PolNProfile->GetParameter(ii);
 	
 	*sum_val=0.;
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
 		double x=i+1.5;
-		// bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5);
-		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8);
-		// bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8)+par[9]*pow(x,9);
+		bdf_SFB=0.;
+		for(int ii=0;ii<i_par;ii++)
+			bdf_SFB+=par[ii]*pow(x,ii);
 		PostSFB[i]=PreSFB[i]-bdf_SFB;
 		if(i+1>binl&&i+1<binr)
 			*sum_val+=PostSFB[i];
@@ -2021,7 +2015,9 @@ int main(int argc, char** argv)
 	PostSFB.resize(N_STRIPS);
 
 	TFile* rootfile=new TFile("Output/PostAnalysis.root","RECREATE");
+	TText* Texte=new TText();
 	TString name_area;
+	TString text_tmp;
 	unsigned short label;
 	int data_calib=0;
 	int data_meas=0;
@@ -2055,6 +2051,9 @@ int main(int argc, char** argv)
 	double mean_y;
 	double rms_x;
 	double rms_y;
+	double xt;
+	double yt;
+	double ydecal=.04;
 	double min;
 	double max;
 	double calib_factor;
@@ -2464,21 +2463,7 @@ int main(int argc, char** argv)
 				TH2_Area->GetYaxis()->SetLabelSize(0.02);
 				TH2_Area->Draw("colz");
 
-				cArea->cd(2);
-				// TText* Text=new TText();
-				// TPaveText *pt = new TPaveText(.05,.1,.95,.8);
-				// pt->AddText("A TPaveText can contain severals line of text.");
-				// pt->AddText("They are added to the pave using the AddText method.");
-				// pt->AddLine(.0,.5,1.,.5);
-				// pt->AddText("Even complex TLatex formulas can be added:");
-				// TText *t1 = pt->AddText("F(t) = #sum_{i=-#infty}^{#infty}A(i)cos#[]{#frac{i}{t+i}}");
-				// t1->SetTextColor(kBlue);
-				// pt->Draw();
-				// TText *t2 = pt->GetLineWith("Even");
-				// t2->SetTextColor(kOrange+1);
-
 				cArea->cd(3);
-		
 				TSpectrum* spect_x_area=new TSpectrum();
 				npeak=spect_x_area->Search(Profil_x_area,2,"",0.10);
 				if(npeak==1)
@@ -2561,6 +2546,48 @@ int main(int argc, char** argv)
 				vect_rms_y_area[count_area]=GaussProfilY->GetParameter(2);
 				GaussProfilY->Delete();
 				spect_y_area->Delete();
+
+				cArea->cd(2);
+				xt=.9;
+				yt=.9;
+				Texte->SetTextAlign(31);
+				Texte->SetTextFont(43);
+				Texte->SetTextSize(15);
+				Texte->SetTextColor(1);
+				text_tmp.Form("Irradiation %d",count_area+1);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				yt-=ydecal;
+				text_tmp.Form("Debut : %2.2lf sec",signal_time[count_area][0]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				text_tmp.Form("Fin : %2.2lf sec",signal_time[count_area][1]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				text_tmp.Form("Duree : %2.2lf sec",signal_time[count_area][1]-signal_time[count_area][0]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				yt-=ydecal;
+				text_tmp.Form("Charge totale X : %2.2lf pC",vect_charge_x_area[count_area]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				text_tmp.Form("Charge totale Y : %2.2lf pC",vect_charge_y_area[count_area]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				text_tmp.Form("Charge totale : %2.2lf pC",vect_charge_t_area[count_area]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				yt-=ydecal;
+				Texte->DrawText(xt,yt,"Parametres ajustement");
+				yt-=ydecal;
+				Texte->DrawText(xt,yt,"Centre; RMS");
+				yt-=ydecal;
+				text_tmp.Form("X : %3.3lf; %2.2E",vect_mean_x_area[count_area],vect_rms_x_area[count_area]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				text_tmp.Form("Y : %3.3lf; %2.2E",vect_mean_y_area[count_area],vect_rms_y_area[count_area]);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
 
 				name_area="Picture/Area_";
 				name_area+=(count_area+1);
