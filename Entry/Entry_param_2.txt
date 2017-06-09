@@ -1,6 +1,6 @@
-File: Calibration_4_0001.fast
+File: Calibration_2_0001.fast
 Path for the file: /home/garrido/Dosion/CPO_05_2017/
-Background extraction (yes/no sub/function/default): function
+Background extraction (yes/no sub/function/default): yes
 Irradiation area finding way (charge/derivative/quanta/manual): quanta
 Boundaries: 30. 60.
 Threshold: 100
@@ -11,3 +11,4 @@ Particle energy: 0.
 Time sampling (s): 1.
 Acquisition time for electronic offset: 20.
 Integration steps: 500
+Gaussian to fit: 2

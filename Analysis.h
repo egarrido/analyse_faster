@@ -75,6 +75,7 @@ const int MAX_SMPL=1000;
 const int MAX_INTEGR=1000000;
 
 int bkgnd_param=0;
+int Gausstofit=1;
 int calibrage_used=0;
 int area_find_param=0;
 int Strip_label;

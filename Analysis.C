@@ -49,6 +49,8 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	11
 	Variable_init.push_back("Acquisition time for electronic offset"); // 12
 	Value_init.push_back(0.);	//	12
+	Variable_init.push_back("Gaussian to fit"); // 13
+	Value_init.push_back(0.);	//	13
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -171,7 +173,7 @@ void EntryParameters(int config_simu)
 						bound_max=m;
 						ss2.clear();
 					}
-					if(ind_value==9||ind_value==12)
+					if(ind_value==9||ind_value==12||ind_value==13)
 					{
 						value=(double)atof(buffer.c_str());
 						if(value==Value_init[ind_value])
@@ -263,6 +265,10 @@ void EntryParameters(int config_simu)
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 	bound_eoff=Value_init[ivar];
 
+	ivar=13;
+	cout<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
+	Gausstofit=(int)Value_init[ivar];
+
 	ivar=7;
 	if(Value_init[ivar]==0)
 		cout<<" Derivative charge method used with a threshold of "<<Value_init[9]<<endl;
@@ -328,6 +334,9 @@ void EntryParameters(int config_simu)
 
 		ivar=12;
 		logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+
+		ivar=13;
+		logfile<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
 
 		ivar=7;
 		if(Value_init[ivar]==0)
@@ -2063,6 +2072,7 @@ int main(int argc, char** argv)
 	double chargeOverT=0.;
 	double Threshold=0.005;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double factor_eoff=.00001;
+	double par[6];
 	double EOffX[N_STRIPS];
 	double EOffY[N_STRIPS];
 	float* PeakX;
@@ -2089,6 +2099,10 @@ int main(int argc, char** argv)
 	double vect_mean_y_area[MAX_SMPL];
 	double vect_rms_x_area[MAX_SMPL];
 	double vect_rms_y_area[MAX_SMPL];
+	double vect_mean_x2_area[MAX_SMPL];
+	double vect_mean_y2_area[MAX_SMPL];
+	double vect_rms_x2_area[MAX_SMPL];
+	double vect_rms_y2_area[MAX_SMPL];
 	double signal_time[MAX_SMPL][2];
 
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -2176,7 +2190,6 @@ int main(int argc, char** argv)
 	// while((data=faster_file_reader_next(reader))!=NULL&&i_tmp<5) 
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
-		i_tmp++;
 		label=faster_data_label(data);
 		if(label==LabelCount)
 			data_calib=1;
@@ -2184,6 +2197,7 @@ int main(int argc, char** argv)
 			data_meas=1;
 		if(label==LabelX||label==LabelY)
 		{
+			i_tmp++;
 			if(t0==-1)
 			{
 				t0=faster_data_clock_sec(data);
@@ -2240,7 +2254,7 @@ int main(int argc, char** argv)
 					bool_print=0;
 				if((fasterTime>mid_signal&&bool_print==0))
 					bool_print=1;
-				SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
+				// SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
 				if(bool_print==1)
 					bool_print=2;
 				// for(int iii=0;iii<N_STRIPS;iii++)
@@ -2373,8 +2387,11 @@ int main(int argc, char** argv)
 				TH2F* TH2_Area=new TH2F(name_area,"Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
 				TH1F* Profil_x_area=new TH1F("Profil_x_area","X profile in number of particles",N_STRIPS,1,33);
 				TH1F* Profil_y_area=new TH1F("Profil_y_area","Y profile in number of particles",N_STRIPS,1,33);
-				TF1* GaussProfilX=new TF1("GaussProfilX","[0]*TMath::Gaus(x,[1],[2])",2,32);
-				TF1* GaussProfilY=new TF1("GaussProfilY","[0]*TMath::Gaus(x,[1],[2])",2,32);
+				TF1* GaussProfilX=new TF1("GaussProfilX","gaus",2,32);
+				TF1* GaussProfilY=new TF1("GaussProfilY","gaus",2,32);
+				TF1* g2=new TF1("g2","gaus",1,33);
+				TF1* Gauss2ProfilX=new TF1("Gauss2ProfilX","gaus(0)+gaus(3)",1,33);
+				TF1* Gauss2ProfilY=new TF1("Gauss2ProfilY","gaus(0)+gaus(3)",1,33);
 				GaussProfilX->SetNpx(1000);
 				GaussProfilY->SetNpx(1000);
 
@@ -2477,7 +2494,6 @@ int main(int argc, char** argv)
 				ampl=Profil_x_area->GetBinContent(Profil_x_area->GetBin(i_cx));
 				// ampl=Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin());
 				GaussProfilX->SetParameters(ampl,mean_x,rms_x);
-				// cout<<ampl<<" "<<mean_x<<" "<<rms_x<<endl;
 
 				i_cx=TMath::Max(2,Profil_x_area->GetMaximumBin()-5);
 				i_cy=TMath::Min(Profil_x_area->GetNbinsX()-2,Profil_x_area->GetMaximumBin()+5);
@@ -2497,16 +2513,31 @@ int main(int argc, char** argv)
 				Profil_x_area->GetYaxis()->CenterTitle();
 				Profil_x_area->GetYaxis()->SetLabelSize(0.02);
 				Profil_x_area->Draw();
-				Profil_x_area->Fit(GaussProfilX,"Q","",i_cx,i_cy);
-				Profil_x_area->Fit(GaussProfilX,"QR");
+				Profil_x_area->Fit(GaussProfilX,"Q0","",i_cx,i_cy);
+				if(Gausstofit==1)
+				{
+					Profil_x_area->Fit(GaussProfilX,"QR");
+					vect_mean_x_area[count_area]=GaussProfilX->GetParameter(1);
+					vect_rms_x_area[count_area]=GaussProfilX->GetParameter(2);
+				}
+				if(Gausstofit==2)
+				{
+					Profil_x_area->Fit(g2,"Q0R+");
+					GaussProfilX->GetParameters(&par[0]);
+					g2->GetParameters(&par[3]);
+					Gauss2ProfilX->SetParameters(par);
+					Profil_x_area->Fit(Gauss2ProfilX,"QR+");	
+					vect_mean_x_area[count_area]=Gauss2ProfilX->GetParameter(1);
+					vect_rms_x_area[count_area]=Gauss2ProfilX->GetParameter(2);
+					vect_mean_x2_area[count_area]=Gauss2ProfilX->GetParameter(4);
+					vect_rms_x2_area[count_area]=Gauss2ProfilX->GetParameter(5);
+				}
 
-				vect_mean_x_area[count_area]=GaussProfilX->GetParameter(1);
-				vect_rms_x_area[count_area]=GaussProfilX->GetParameter(2);
 				GaussProfilX->Delete();
+				Gauss2ProfilX->Delete();
 				spect_x_area->Delete();
 
 				cArea->cd(4);
-
 				TSpectrum* spect_y_area=new TSpectrum();
 				npeak=spect_y_area->Search(Profil_y_area,2,"",0.10);
 				if(npeak==1)
@@ -2539,13 +2570,30 @@ int main(int argc, char** argv)
 				Profil_y_area->GetYaxis()->CenterTitle();
 				Profil_y_area->GetYaxis()->SetLabelSize(0.02);
 				Profil_y_area->Draw();
-				Profil_y_area->Fit(GaussProfilY,"Q","",i_cx,i_cy);
-				Profil_y_area->Fit(GaussProfilY,"QR");
-	
-				vect_mean_y_area[count_area]=GaussProfilY->GetParameter(1);
-				vect_rms_y_area[count_area]=GaussProfilY->GetParameter(2);
+				Profil_y_area->Fit(GaussProfilY,"Q0","",i_cx,i_cy);
+				if(Gausstofit==1)
+				{
+					Profil_y_area->Fit(GaussProfilY,"QR");
+					vect_mean_y_area[count_area]=GaussProfilY->GetParameter(1);
+					vect_rms_y_area[count_area]=GaussProfilY->GetParameter(2);
+				}
+				if(Gausstofit==2)
+				{
+					Profil_y_area->Fit(g2,"Q0+");
+					GaussProfilY->GetParameters(&par[0]);
+					g2->GetParameters(&par[3]);
+					Gauss2ProfilY->SetParameters(par);
+					Profil_y_area->Fit(Gauss2ProfilY,"QR+");	
+					vect_mean_y_area[count_area]=Gauss2ProfilY->GetParameter(1);
+					vect_rms_y_area[count_area]=Gauss2ProfilY->GetParameter(2);
+					vect_mean_y2_area[count_area]=Gauss2ProfilY->GetParameter(4);
+					vect_rms_y2_area[count_area]=Gauss2ProfilY->GetParameter(5);
+				}
+
 				GaussProfilY->Delete();
+				Gauss2ProfilY->Delete();
 				spect_y_area->Delete();
+				g2->Delete();
 
 				cArea->cd(2);
 				xt=.9;
@@ -2585,9 +2633,21 @@ int main(int argc, char** argv)
 				text_tmp.Form("X : %3.3lf; %2.2E",vect_mean_x_area[count_area],vect_rms_x_area[count_area]);
 				Texte->DrawText(xt,yt,text_tmp);
 				yt-=ydecal;
+				if(Gausstofit==2)
+				{
+					text_tmp.Form("X : %3.3lf; %2.2E",vect_mean_x2_area[count_area],vect_rms_x2_area[count_area]);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+				}
 				text_tmp.Form("Y : %3.3lf; %2.2E",vect_mean_y_area[count_area],vect_rms_y_area[count_area]);
 				Texte->DrawText(xt,yt,text_tmp);
 				yt-=ydecal;
+				if(Gausstofit==2)
+				{
+					text_tmp.Form("Y : %3.3lf; %2.2E",vect_mean_y2_area[count_area],vect_rms_y2_area[count_area]);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+				}
 
 				name_area="Picture/Area_";
 				name_area+=(count_area+1);
@@ -2616,8 +2676,8 @@ int main(int argc, char** argv)
 				{
 					TH1F* Profil_x_smpl=new TH1F("Profil_x_area","X profile in number of particles",N_STRIPS,1,33);
 					TH1F* Profil_y_smpl=new TH1F("Profil_y_area","Y profile in number of particles",N_STRIPS,1,33);
-					TF1* GaussProfilX=new TF1("GaussProfilX","[0]*TMath::Gaus(x,[1],[2])",2,32);
-					TF1* GaussProfilY=new TF1("GaussProfilY","[0]*TMath::Gaus(x,[1],[2])",2,32);
+					TF1* GaussProfilX=new TF1("GaussProfilX","gaus",2,32);
+					TF1* GaussProfilY=new TF1("GaussProfilY","gaus",2,32);
 					GaussProfilX->SetNpx(1000);
 					GaussProfilY->SetNpx(1000);
 					
