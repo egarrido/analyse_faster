@@ -2056,10 +2056,18 @@ int main(int argc, char** argv)
 	double val;
 	double charge;
 	double ampl;
+	double ampl_x;
+	double ampl_y;
+	double ampl_x2;
+	double ampl_y2;
 	double mean_x;
 	double mean_y;
 	double rms_x;
 	double rms_y;
+	double mean_x2;
+	double mean_y2;
+	double rms_x2;
+	double rms_y2;
 	double xt;
 	double yt;
 	double ydecal=.04;
@@ -2069,7 +2077,6 @@ int main(int argc, char** argv)
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
-	double chargeOverT=0.;
 	double Threshold=0.005;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double factor_eoff=.00001;
 	double par[6];
@@ -2082,7 +2089,6 @@ int main(int argc, char** argv)
 	TArrayD* SamplY=new TArrayD(N_STRIPS);
 	TArrayD* AreaX=new TArrayD(N_STRIPS);
 	TArrayD* AreaY=new TArrayD(N_STRIPS);
-	double Map[N_STRIPS][N_STRIPS];
 	double ProfilX[N_STRIPS];
 	double ProfilY[N_STRIPS];
 	double vect_time_spl[MAX_SMPL];
@@ -2095,10 +2101,14 @@ int main(int argc, char** argv)
 	double vect_charge_t_area[MAX_SMPL];
 	double vect_charge_x_area[MAX_SMPL];
 	double vect_charge_y_area[MAX_SMPL];
+	double vect_ampl_x_area[MAX_SMPL];
+	double vect_ampl_y_area[MAX_SMPL];
 	double vect_mean_x_area[MAX_SMPL];
 	double vect_mean_y_area[MAX_SMPL];
 	double vect_rms_x_area[MAX_SMPL];
 	double vect_rms_y_area[MAX_SMPL];
+	double vect_ampl_x2_area[MAX_SMPL];
+	double vect_ampl_y2_area[MAX_SMPL];
 	double vect_mean_x2_area[MAX_SMPL];
 	double vect_mean_y2_area[MAX_SMPL];
 	double vect_rms_x2_area[MAX_SMPL];
@@ -2139,8 +2149,6 @@ int main(int argc, char** argv)
 	{
 		ProfilX[j]=0;
 		ProfilY[j]=0;
-		for(int k=0;k<N_STRIPS;k++)
-			Map[j][k]=0.;
 	}
 	ChX->Reset();
 	ChY->Reset();
@@ -2254,7 +2262,7 @@ int main(int argc, char** argv)
 					bool_print=0;
 				if((fasterTime>mid_signal&&bool_print==0))
 					bool_print=1;
-				// SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
+				SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
 				if(bool_print==1)
 					bool_print=2;
 				// for(int iii=0;iii<N_STRIPS;iii++)
@@ -2291,7 +2299,8 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
-							if(in_area==0)
+							// if(in_area==0)
+							if(in_area==0&&(j>borne_m_x&&j<borne_M_x))
 								chargeTot_signal_X+=val;
 							// if(val<EOffX[j]*factor_eoff)
 							// 	val=0.; 
@@ -2301,7 +2310,8 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
-							if(in_area==0)
+							// if(in_area==0)
+							if(in_area==0&&(j>borne_m_y&&j<borne_M_y))
 								chargeTot_signal_Y+=val;
 							// if(val<EOffY[j]*factor_eoff)
 							// 	val=0.; 
@@ -2322,27 +2332,28 @@ int main(int argc, char** argv)
 				{
 					val=ChX->GetAt(j);
 					ProfilX[j]+=val;
-					val=ChY->GetAt(j);
-					ProfilY[j]+=val;
-					if(ChX->GetAt(j)>Threshold)
-						sum_x+=ChX->GetAt(j);
-					if(ChY->GetAt(j)>Threshold)
-						sum_y+=ChY->GetAt(j);
-					val=ChX->GetAt(j)+SamplX->GetAt(j);
+					if(val>Threshold)
+						sum_x+=val;
+					val+=SamplX->GetAt(j);
 					SamplX->SetAt(val,j);
-					val=ChY->GetAt(j)+SamplY->GetAt(j);
-					SamplY->SetAt(val,j);
-					
 					if(in_area==0)
 					{
 						val=ChX->GetAt(j)+AreaX->GetAt(j);
 						AreaX->SetAt(val,j);
+					}
+
+					val=ChY->GetAt(j);
+					ProfilY[j]+=val;
+					if(val>Threshold)
+						sum_y+=val;
+					val+=SamplY->GetAt(j);
+					SamplY->SetAt(val,j);
+					if(in_area==0)
+					{
 						val=ChY->GetAt(j)+AreaY->GetAt(j);
 						AreaY->SetAt(val,j);
 					}
 				}
-				// sum_x=ChX->GetSum();
-				// sum_y=ChY->GetSum();
 				vect_time_tot[count_tot]=fasterTime;
 				vect_charge_clean[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.;
 
@@ -2360,19 +2371,6 @@ int main(int argc, char** argv)
 				chargeTot_pC+=(sum_x+sum_y)/2.;
 				count_tot++;
 
-				// if(sum_x>Threshold&&sum_y>Threshold)
-				if(sum_x>0.&&sum_y>0.)
-				{
-					for(int j=0;j<N_STRIPS;j++)
-					{
-						for(int k=0;k<N_STRIPS;k++)
-						{
-							val=ChX->GetAt(j)*ChY->GetAt(k)/(sum_x*sum_y)*(sum_x+sum_y)/2.;
-							Map[j][k]+=val;
-						}
-					}
-					chargeOverT+=(sum_x+sum_y)/2.;
-				}
 				// errrel<<sum_x<<" "<<sum_y<<endl;
 				ChX->Reset();
 				ChY->Reset();
@@ -2392,8 +2390,9 @@ int main(int argc, char** argv)
 				TF1* g2=new TF1("g2","gaus",1,33);
 				TF1* Gauss2ProfilX=new TF1("Gauss2ProfilX","gaus(0)+gaus(3)",1,33);
 				TF1* Gauss2ProfilY=new TF1("Gauss2ProfilY","gaus(0)+gaus(3)",1,33);
-				GaussProfilX->SetNpx(1000);
-				GaussProfilY->SetNpx(1000);
+				GaussProfilX->SetNpx(bin_up);
+				GaussProfilY->SetNpx(bin_up);
+				g2->SetNpx(bin_up);
 
 				mean_x=0.;
 				mean_y=0.;
@@ -2493,7 +2492,7 @@ int main(int argc, char** argv)
 				i_cx=ceil(mean_x);
 				ampl=Profil_x_area->GetBinContent(Profil_x_area->GetBin(i_cx));
 				// ampl=Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin());
-				GaussProfilX->SetParameters(ampl,mean_x,rms_x);
+				// GaussProfilX->SetParameters(ampl,mean_x,rms_x);
 
 				i_cx=TMath::Max(2,Profil_x_area->GetMaximumBin()-5);
 				i_cy=TMath::Min(Profil_x_area->GetNbinsX()-2,Profil_x_area->GetMaximumBin()+5);
@@ -2512,6 +2511,7 @@ int main(int argc, char** argv)
 				Profil_x_area->GetYaxis()->SetTitleSize(0.036);	
 				Profil_x_area->GetYaxis()->CenterTitle();
 				Profil_x_area->GetYaxis()->SetLabelSize(0.02);
+				Profil_x_area->GetYaxis()->SetRangeUser(0,Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin())*1.05);
 				Profil_x_area->Draw();
 				Profil_x_area->Fit(GaussProfilX,"Q0","",i_cx,i_cy);
 				if(Gausstofit==1)
@@ -2527,8 +2527,10 @@ int main(int argc, char** argv)
 					g2->GetParameters(&par[3]);
 					Gauss2ProfilX->SetParameters(par);
 					Profil_x_area->Fit(Gauss2ProfilX,"QR+");	
+					vect_ampl_x_area[count_area]=Gauss2ProfilX->GetParameter(0);
 					vect_mean_x_area[count_area]=Gauss2ProfilX->GetParameter(1);
 					vect_rms_x_area[count_area]=Gauss2ProfilX->GetParameter(2);
+					vect_ampl_x2_area[count_area]=Gauss2ProfilX->GetParameter(3);
 					vect_mean_x2_area[count_area]=Gauss2ProfilX->GetParameter(4);
 					vect_rms_x2_area[count_area]=Gauss2ProfilX->GetParameter(5);
 				}
@@ -2550,7 +2552,7 @@ int main(int argc, char** argv)
 				i_cy=ceil(mean_y);
 				ampl=Profil_y_area->GetBinContent(Profil_y_area->GetBin(i_cy));
 				// ampl=Profil_y_area->GetBinContent(Profil_y_area->GetMaximumBin());
-				GaussProfilY->SetParameters(ampl,mean_y,rms_y);
+				// GaussProfilY->SetParameters(ampl,mean_y,rms_y);
 
 				i_cx=TMath::Max(1,Profil_y_area->GetMaximumBin()-6);
 				i_cy=TMath::Min(Profil_y_area->GetNbinsX()-1,Profil_y_area->GetMaximumBin()+6);
@@ -2569,6 +2571,7 @@ int main(int argc, char** argv)
 				Profil_y_area->GetYaxis()->SetTitleSize(0.036);
 				Profil_y_area->GetYaxis()->CenterTitle();
 				Profil_y_area->GetYaxis()->SetLabelSize(0.02);
+				Profil_y_area->GetYaxis()->SetRangeUser(0,Profil_y_area->GetBinContent(Profil_y_area->GetMaximumBin())*1.05);
 				Profil_y_area->Draw();
 				Profil_y_area->Fit(GaussProfilY,"Q0","",i_cx,i_cy);
 				if(Gausstofit==1)
@@ -2584,8 +2587,10 @@ int main(int argc, char** argv)
 					g2->GetParameters(&par[3]);
 					Gauss2ProfilY->SetParameters(par);
 					Profil_y_area->Fit(Gauss2ProfilY,"QR+");	
+					vect_ampl_y_area[count_area]=Gauss2ProfilY->GetParameter(0);
 					vect_mean_y_area[count_area]=Gauss2ProfilY->GetParameter(1);
 					vect_rms_y_area[count_area]=Gauss2ProfilY->GetParameter(2);
+					vect_ampl_y2_area[count_area]=Gauss2ProfilY->GetParameter(3);
 					vect_mean_y2_area[count_area]=Gauss2ProfilY->GetParameter(4);
 					vect_rms_y2_area[count_area]=Gauss2ProfilY->GetParameter(5);
 				}
@@ -2775,7 +2780,7 @@ int main(int argc, char** argv)
 			logfile<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
 			<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Charge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 	}
-	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge partielle : "<<chargeOverT<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
+	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
 
 	TH2F* TH2_Map=new TH2F("TH2_Map","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
 	TH1F* Profil_x=new TH1F("ProfX","X profile in number of particles",N_STRIPS,1,33);
@@ -2873,12 +2878,20 @@ int main(int argc, char** argv)
 	free(vect_charge_cumul);
 	free(vect_fluence_cumul);
 
+	sum_x=0.;
+	sum_y=0.;
+	for(int j=0;j<N_STRIPS;j++)
+	{
+		sum_x+=ProfilX[j];
+		sum_y+=ProfilY[j];
+	}
+
 	for(int j=0;j<N_STRIPS;j++)	
 	{
 		Profil_x->SetBinContent(j+1,ProfilX[j]);
 		Profil_y->SetBinContent(j+1,ProfilY[j]);
 		for(int k=0;k<N_STRIPS;k++)
-			TH2_Map->SetBinContent(j+1,k+1,Map[j][k]);
+			TH2_Map->SetBinContent(j+1,k+1,ProfilX[j]*ProfilY[k]/(sum_x*sum_y)*(sum_x+sum_y)/2.);
 	}
 
 	ampl=TH2_Map->GetBinContent(TH2_Map->GetMaximumBin());
@@ -2918,11 +2931,15 @@ int main(int argc, char** argv)
 	cMap->cd(2);
 	// bin_up=N_STRIPS;
 	TF2 *f2DGauss = new TF2("f2DGauss","[0]*TMath::Gaus(x,[1],[2])*TMath::Gaus(y,[3],[4])",1,33,1,33);
+	TF2 *f2D2Gauss = new TF2("f2D2Gauss","([0]*TMath::Gaus(x,[1],[2])+[3]*TMath::Gaus(x,[4],[5]))*([6]*TMath::Gaus(y,[7],[8])+[9]*TMath::Gaus(y,[10],[11]))/(([0]+[3])*([6]+[9]))*[12]",1,33,1,33);
+	// TF2 *f2D2Gauss = new TF2("f2D2Gauss","([0]*TMath::Gaus(x,[1],[2])+[3]*TMath::Gaus(x,[4],[5]))*([6]*TMath::Gaus(y,[7],[8])+TMath::Gaus(y,[9],[10]))",1,33,1,33);
 	TH2F* TH2_Map_up=new TH2F("TH2_Map_up","Enhanced fluency map (particle/cm2)",bin_up,1,33,bin_up,1,33);
 	TH2F* TH2_Map_tmp=new TH2F();
 
 	f2DGauss->SetNpx(bin_up);
 	f2DGauss->SetNpy(bin_up);
+	f2D2Gauss->SetNpx(bin_up);
+	f2D2Gauss->SetNpy(bin_up);
 	for(int i=0;i<tot_area;i++)
 	{
 		ampl=vect_ampl_area[i];
@@ -2930,8 +2947,38 @@ int main(int argc, char** argv)
 		mean_y=vect_mean_y_area[i];
 		rms_x=vect_rms_x_area[i];
 		rms_y=vect_rms_y_area[i];
-		f2DGauss->SetParameters(ampl,mean_x,rms_x,mean_y,rms_y);
-		TH2_Map_tmp=((TH2F*)f2DGauss->GetHistogram());
+		if(Gausstofit==1)
+		{
+			f2DGauss->SetParameters(ampl,mean_x,rms_x,mean_y,rms_y);
+			TH2_Map_tmp=((TH2F*)f2DGauss->GetHistogram());
+		}
+		if(Gausstofit==2)
+		{
+			f2D2Gauss->SetParameter(0,vect_ampl_x_area[i]);
+			f2D2Gauss->SetParameter(1,vect_mean_x_area[i]);
+			f2D2Gauss->SetParameter(2,vect_rms_x_area[i]);
+			f2D2Gauss->SetParameter(3,vect_ampl_x2_area[i]);
+			f2D2Gauss->SetParameter(4,vect_mean_x2_area[i]);
+			f2D2Gauss->SetParameter(5,vect_rms_x2_area[i]);
+			f2D2Gauss->SetParameter(6,vect_ampl_y_area[i]);
+			f2D2Gauss->SetParameter(7,vect_mean_y_area[i]);
+			f2D2Gauss->SetParameter(8,vect_rms_y_area[i]);
+			f2D2Gauss->SetParameter(9,vect_ampl_y2_area[i]);
+			f2D2Gauss->SetParameter(10,vect_mean_y2_area[i]);
+			f2D2Gauss->SetParameter(11,vect_rms_y2_area[i]);
+			f2D2Gauss->SetParameter(12,vect_ampl_area[i]);
+			// ampl_x=vect_ampl_x_area[i];
+			// ampl_y=vect_ampl_y_area[i];
+			// ampl_x2=vect_ampl_x2_area[i];
+			// ampl_y2=vect_ampl_y2_area[i];
+			// mean_x2=vect_mean_x2_area[i];
+			// mean_y2=vect_mean_y2_area[i];
+			// rms_x2=vect_rms_x2_area[i];
+			// rms_y2=vect_rms_y2_area[i];
+			// cout<<ampl_x<<" "<<ampl_x2<<" "<<ampl_y<<" "<<ampl_y2<<" "<<mean_x<<" "<<rms_x<<" "<<mean_x2<<" "<<rms_x2<<" "<<mean_y<<" "<<rms_y<<" "<<mean_y2<<" "<<rms_y2<<" "<<endl;
+			// f2D2Gauss->SetParameters(ampl_x,mean_x,rms_x,ampl_x2,mean_x2,rms_x2,ampl_y,mean_y,rms_y,ampl_y2,mean_y2);
+			TH2_Map_tmp=((TH2F*)f2D2Gauss->GetHistogram());
+		}
 		for(int j=0;j<bin_up;j++)	for(int k=0;k<bin_up;k++)
 		{
 			voxel=j*bin_up+k;
@@ -2981,6 +3028,7 @@ int main(int argc, char** argv)
 	Profil_x->GetYaxis()->SetTitleSize(0.036);
 	Profil_x->GetYaxis()->CenterTitle();
 	Profil_x->GetYaxis()->SetLabelSize(0.02);
+	Profil_x->GetYaxis()->SetRangeUser(0,Profil_x->GetBinContent(Profil_x->GetMaximumBin())*1.05);
 	Profil_x->Draw();
 
 	cMap->cd(4);
@@ -2998,6 +3046,7 @@ int main(int argc, char** argv)
 	Profil_y->GetYaxis()->SetTitleSize(0.036);
 	Profil_y->GetYaxis()->CenterTitle();
 	Profil_y->GetYaxis()->SetLabelSize(0.02);
+	Profil_y->GetYaxis()->SetRangeUser(0,Profil_y->GetBinContent(Profil_y->GetMaximumBin())*1.05);
 	Profil_y->Draw();
 	cMap->SaveAs("Picture/Fluence_reconstruction.png");
 	
@@ -3006,97 +3055,101 @@ int main(int argc, char** argv)
 	TH2_Map_up->Delete();
 	// TH2_Map_tmp->Delete();
 	f2DGauss->Delete();
+	f2D2Gauss->Delete();
 	Profil_x->Delete();
 	Profil_y->Delete();
 	cMap->Destructor();
 
-	TCanvas *cSamp= new TCanvas("Sampling dose");
-	cSamp->SetCanvasSize(1000,1000);
-	cSamp->Divide(1,4);
+	if(nbSummedSample>0)
+	{
+		TCanvas *cSamp= new TCanvas("Sampling dose");
+		cSamp->SetCanvasSize(1000,1000);
+		cSamp->Divide(1,4);
 
-	cSamp->cd(1);
-	TGraph *TG_Mean_x=new TGraph(nbSummedSample,vect_time_spl,vect_mean_x);
-	TG_Mean_x->SetMarkerStyle(2);
-	TG_Mean_x->SetMarkerColor(2);
-	TG_Mean_x->SetLineColor(2);
-	TG_Mean_x->SetLineWidth(1.5);
-	TG_Mean_x->SetTitle("Mean X position");
-	TG_Mean_x->GetXaxis()->SetTitle("Time (s)");
-	TG_Mean_x->GetXaxis()->SetTickSize(0.01);
-	TG_Mean_x->GetXaxis()->SetTitleSize(0.06);
-	TG_Mean_x->GetXaxis()->SetLabelSize(0.05);
-	TG_Mean_x->GetYaxis()->SetTitle("Position");
-	TG_Mean_x->GetYaxis()->SetTickSize(0.01);
-	TG_Mean_x->GetYaxis()->SetTitleSize(0.06);
-	TG_Mean_x->GetYaxis()->CenterTitle();
-	TG_Mean_x->GetYaxis()->SetLabelSize(0.05);
-	TG_Mean_x->Write("Mean X");
-	TG_Mean_x->Draw("ALP");
+		cSamp->cd(1);
+		TGraph *TG_Mean_x=new TGraph(nbSummedSample,vect_time_spl,vect_mean_x);
+		TG_Mean_x->SetMarkerStyle(2);
+		TG_Mean_x->SetMarkerColor(2);
+		TG_Mean_x->SetLineColor(2);
+		TG_Mean_x->SetLineWidth(1.5);
+		TG_Mean_x->SetTitle("Mean X position");
+		TG_Mean_x->GetXaxis()->SetTitle("Time (s)");
+		TG_Mean_x->GetXaxis()->SetTickSize(0.01);
+		TG_Mean_x->GetXaxis()->SetTitleSize(0.06);
+		TG_Mean_x->GetXaxis()->SetLabelSize(0.05);
+		TG_Mean_x->GetYaxis()->SetTitle("Position");
+		TG_Mean_x->GetYaxis()->SetTickSize(0.01);
+		TG_Mean_x->GetYaxis()->SetTitleSize(0.06);
+		TG_Mean_x->GetYaxis()->CenterTitle();
+		TG_Mean_x->GetYaxis()->SetLabelSize(0.05);
+		TG_Mean_x->Write("Mean X");
+		TG_Mean_x->Draw("ALP");
 
-	cSamp->cd(2);
-	TGraph *TG_Mean_y=new TGraph(nbSummedSample,vect_time_spl,vect_mean_y);
-	TG_Mean_y->SetMarkerStyle(2);
-	TG_Mean_y->SetMarkerColor(2);
-	TG_Mean_y->SetLineColor(2);
-	TG_Mean_y->SetLineWidth(1.5);
-	TG_Mean_y->SetTitle("Mean Y position");
-	TG_Mean_y->GetXaxis()->SetTitle("Time (s)");
-	TG_Mean_y->GetXaxis()->SetTickSize(0.01);
-	TG_Mean_y->GetXaxis()->SetTitleSize(0.06);
-	TG_Mean_y->GetXaxis()->SetLabelSize(0.05);
-	TG_Mean_y->GetYaxis()->SetTitle("Position");
-	TG_Mean_y->GetYaxis()->SetTickSize(0.01);
-	TG_Mean_y->GetYaxis()->SetTitleSize(0.06);
-	TG_Mean_y->GetYaxis()->CenterTitle();
-	TG_Mean_y->GetYaxis()->SetLabelSize(0.05);
-	TG_Mean_y->Write("Mean Y");
-	TG_Mean_y->Draw("ALP");
+		cSamp->cd(2);
+		TGraph *TG_Mean_y=new TGraph(nbSummedSample,vect_time_spl,vect_mean_y);
+		TG_Mean_y->SetMarkerStyle(2);
+		TG_Mean_y->SetMarkerColor(2);
+		TG_Mean_y->SetLineColor(2);
+		TG_Mean_y->SetLineWidth(1.5);
+		TG_Mean_y->SetTitle("Mean Y position");
+		TG_Mean_y->GetXaxis()->SetTitle("Time (s)");
+		TG_Mean_y->GetXaxis()->SetTickSize(0.01);
+		TG_Mean_y->GetXaxis()->SetTitleSize(0.06);
+		TG_Mean_y->GetXaxis()->SetLabelSize(0.05);
+		TG_Mean_y->GetYaxis()->SetTitle("Position");
+		TG_Mean_y->GetYaxis()->SetTickSize(0.01);
+		TG_Mean_y->GetYaxis()->SetTitleSize(0.06);
+		TG_Mean_y->GetYaxis()->CenterTitle();
+		TG_Mean_y->GetYaxis()->SetLabelSize(0.05);
+		TG_Mean_y->Write("Mean Y");
+		TG_Mean_y->Draw("ALP");
 
-	cSamp->cd(3);
-	TGraph *TG_Rms_x=new TGraph(nbSummedSample,vect_time_spl,vect_rms_x);
-	TG_Rms_x->SetMarkerStyle(2);
-	TG_Rms_x->SetMarkerColor(4);
-	TG_Rms_x->SetLineColor(4);
-	TG_Rms_x->SetLineWidth(1.5);
-	TG_Rms_x->SetTitle("RMS along x-axis");
-	TG_Rms_x->GetXaxis()->SetTitle("Time (s)");
-	TG_Rms_x->GetXaxis()->SetTickSize(0.01);
-	TG_Rms_x->GetXaxis()->SetTitleSize(0.06);
-	TG_Rms_x->GetXaxis()->SetLabelSize(0.05);
-	TG_Rms_x->GetYaxis()->SetTitle("RMS");
-	TG_Rms_x->GetYaxis()->SetTickSize(0.01);
-	TG_Rms_x->GetYaxis()->SetTitleSize(0.06);
-	TG_Rms_x->GetYaxis()->CenterTitle();
-	TG_Rms_x->GetYaxis()->SetLabelSize(0.05);
-	TG_Rms_x->Write("RMS X");
-	TG_Rms_x->Draw("ALP");
+		cSamp->cd(3);
+		TGraph *TG_Rms_x=new TGraph(nbSummedSample,vect_time_spl,vect_rms_x);
+		TG_Rms_x->SetMarkerStyle(2);
+		TG_Rms_x->SetMarkerColor(4);
+		TG_Rms_x->SetLineColor(4);
+		TG_Rms_x->SetLineWidth(1.5);
+		TG_Rms_x->SetTitle("RMS along x-axis");
+		TG_Rms_x->GetXaxis()->SetTitle("Time (s)");
+		TG_Rms_x->GetXaxis()->SetTickSize(0.01);
+		TG_Rms_x->GetXaxis()->SetTitleSize(0.06);
+		TG_Rms_x->GetXaxis()->SetLabelSize(0.05);
+		TG_Rms_x->GetYaxis()->SetTitle("RMS");
+		TG_Rms_x->GetYaxis()->SetTickSize(0.01);
+		TG_Rms_x->GetYaxis()->SetTitleSize(0.06);
+		TG_Rms_x->GetYaxis()->CenterTitle();
+		TG_Rms_x->GetYaxis()->SetLabelSize(0.05);
+		TG_Rms_x->Write("RMS X");
+		TG_Rms_x->Draw("ALP");
 
-	cSamp->cd(4);
-	TGraph *TG_Rms_y=new TGraph(nbSummedSample,vect_time_spl,vect_rms_y);
-	TG_Rms_y->SetMarkerStyle(2);
-	TG_Rms_y->SetMarkerColor(4);
-	TG_Rms_y->SetLineColor(4);
-	TG_Rms_y->SetLineWidth(1.5);
-	TG_Rms_y->SetTitle("RMS along y-axis");
-	TG_Rms_y->GetXaxis()->SetTitle("Time (s)");
-	TG_Rms_y->GetXaxis()->SetTickSize(0.01);
-	TG_Rms_y->GetXaxis()->SetTitleSize(0.06);
-	TG_Rms_y->GetXaxis()->SetLabelSize(0.05);
-	TG_Rms_y->GetYaxis()->SetTitle("RMS");
-	TG_Rms_y->GetYaxis()->SetTickSize(0.01);
-	TG_Rms_y->GetYaxis()->SetTitleSize(0.06);
-	TG_Rms_y->GetYaxis()->CenterTitle();
-	TG_Rms_y->GetYaxis()->SetLabelSize(0.05);
-	TG_Rms_y->Write("RMS Y");
-	TG_Rms_y->Draw("ALP");
+		cSamp->cd(4);
+		TGraph *TG_Rms_y=new TGraph(nbSummedSample,vect_time_spl,vect_rms_y);
+		TG_Rms_y->SetMarkerStyle(2);
+		TG_Rms_y->SetMarkerColor(4);
+		TG_Rms_y->SetLineColor(4);
+		TG_Rms_y->SetLineWidth(1.5);
+		TG_Rms_y->SetTitle("RMS along y-axis");
+		TG_Rms_y->GetXaxis()->SetTitle("Time (s)");
+		TG_Rms_y->GetXaxis()->SetTickSize(0.01);
+		TG_Rms_y->GetXaxis()->SetTitleSize(0.06);
+		TG_Rms_y->GetXaxis()->SetLabelSize(0.05);
+		TG_Rms_y->GetYaxis()->SetTitle("RMS");
+		TG_Rms_y->GetYaxis()->SetTickSize(0.01);
+		TG_Rms_y->GetYaxis()->SetTitleSize(0.06);
+		TG_Rms_y->GetYaxis()->CenterTitle();
+		TG_Rms_y->GetYaxis()->SetLabelSize(0.05);
+		TG_Rms_y->Write("RMS Y");
+		TG_Rms_y->Draw("ALP");
 
-	rootfile->Write();
-	cSamp->SaveAs("Picture/Sampling.png");
-	cSamp->Destructor();
-	TG_Mean_x->Delete();
-	TG_Mean_y->Delete();
-	TG_Rms_x->Delete();
-	TG_Rms_y->Delete();
+		rootfile->Write();
+		cSamp->SaveAs("Picture/Sampling.png");
+		cSamp->Destructor();
+		TG_Mean_x->Delete();
+		TG_Mean_y->Delete();
+		TG_Rms_x->Delete();
+		TG_Rms_y->Delete();
+	}
 
 	if(data_calib==1&&tot_area>0)
 		Calibrage(filename,chargeTot_signal_X,chargeTot_signal_Y);

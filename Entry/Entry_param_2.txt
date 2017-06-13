@@ -4,11 +4,11 @@ Background extraction (yes/no sub/function/default): yes
 Irradiation area finding way (charge/derivative/quanta/manual): quanta
 Boundaries: 30. 60.
 Threshold: 100
-Exclusion strips X: 15 20
-Exclusion strips Y: 13 19 
+Exclusion strips X: 8 25
+Exclusion strips Y: 8 25 
 Calibrate particle: proton_Cyrce
 Particle energy: 0.
-Time sampling (s): 1.
+Time sampling (s): 100000.
 Acquisition time for electronic offset: 20.
 Integration steps: 500
 Gaussian to fit: 2
