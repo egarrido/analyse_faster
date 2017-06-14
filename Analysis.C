@@ -384,7 +384,7 @@ double Calib_value(int area,int in_area)
 	double energy=Value_init[8];
 	if(in_area!=0)
 		return 0.;
-	// return 1.;
+	return .01875;
 	if(energy==0.)
 		return 1000./calib_data[area];
 	else
@@ -502,12 +502,14 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 		calib_factor=chargeTot_pC/quanta;
 		calib_factor_X=chargeTot_X/quanta;
 		calib_factor_Y=chargeTot_Y/quanta;
+		cout<<"Calibrage issu des quanta"<<endl;
 		cout<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
 		cout<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
 		cout<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 
 		if(logfileprint==true)
 		{
+			logfile<<"Calibrage issu des quanta"<<endl;
 			logfile<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
 			logfile<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
 			logfile<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
@@ -525,7 +527,7 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 	free(vect_dquanta);
 }
 
-void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[])
+void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[],double chargeTot_X,double chargeTot_Y)
 {
 	Vect_calib_factor.clear();
 	Vect_calib_charge.clear();
@@ -618,9 +620,23 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				
 				quanta/=decimation;
 				calib_factor=vect_charge_t[current_area]/quanta;
+				cout<<"Calibrage issu du scaler"<<endl;
+				if(tot_area==1)
+				{
+					cout<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_X/quanta*1000.<<"(fC/part.)"<<endl;
+					cout<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_Y/quanta*1000.<<"(fC/part.)"<<endl;
+				}
 				cout<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 				if(logfileprint==true)
+				{
+					logfile<<"Calibrage issu du scaler"<<endl;
+					if(tot_area==1)
+					{
+						logfile<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_X/quanta*1000.<<"(fC/part.)"<<endl;
+						logfile<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_Y/quanta*1000.<<"(fC/part.)"<<endl;
+					}
 					logfile<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+				}
 
 				Vect_calib_factor[current_area]=calib_factor;
 				Vect_calib_charge[current_area]=vect_charge_t[current_area];
@@ -2007,6 +2023,91 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	TG_Visu->Delete();
 }
 
+void DoseDistribution(double Dose[N_STRIPS][N_STRIPS])
+{
+	int count_dose=0;
+	double dose_max;
+	double mean_dose;
+
+	TH2F* TH2_Dose=new TH2F("TH2_Dose","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
+	TH2F* TH2_Cont=new TH2F();
+
+	for(int i=0;i<N_STRIPS;i++)
+		for(int j=0;j<N_STRIPS;j++)
+			TH2_Dose->SetBinContent(i+1,j+1,Dose[i][j]);
+
+	dose_max=TH2_Dose->GetBinContent(TH2_Dose->GetMaximumBin());
+	double contours[4];
+				 contours[0] = 0.*dose_max;
+				 contours[1] = 0.2*dose_max;
+				 contours[2] = 0.5*dose_max;
+				 contours[3] = 0.9*dose_max;
+
+	TH1F* Dose_dist=new TH1F("Dose_dist","Distribution de dose",25,0,dose_max*1.1);
+	for(int i=0;i<N_STRIPS;i++)
+		for(int j=0;j<N_STRIPS;j++)
+		{
+			if(Dose[i][j]>.9*dose_max)
+			{
+				mean_dose+=Dose[i][j];
+				count_dose++;
+			}
+			Dose_dist->Fill(Dose[i][j]);
+		}
+	cout<<mean_dose/count_dose<<endl;
+
+	TCanvas *cDose= new TCanvas("Dose distribution");
+	cDose->SetCanvasSize(1000,1000);
+	cDose->Divide(2,2);
+
+	cDose->cd(1);
+	TH2_Dose->SetTitle("");//Fluency map (particle/cm2)");
+	TH2_Dose->SetTitleSize(0.0);
+	TH2_Dose->SetStats(0);
+	TH2_Dose->GetXaxis()->SetTitle("Channel X");
+	TH2_Dose->GetXaxis()->SetNdivisions(N_STRIPS);
+	TH2_Dose->GetXaxis()->SetTickSize(0.01);
+	TH2_Dose->GetXaxis()->SetTitleSize(0.036);
+	TH2_Dose->GetXaxis()->CenterTitle();
+	TH2_Dose->GetXaxis()->SetLabelSize(0.02);
+	TH2_Dose->GetYaxis()->SetTitle("Channel Y");
+	TH2_Dose->GetYaxis()->SetNdivisions(N_STRIPS);
+	TH2_Dose->GetYaxis()->SetTickSize(0.01);
+	TH2_Dose->GetYaxis()->SetTitleSize(0.036);
+	TH2_Dose->GetYaxis()->CenterTitle();
+	TH2_Dose->GetYaxis()->SetLabelSize(0.02);
+	TH2_Dose->Draw("colz");
+
+	TH2_Cont=(TH2F*)TH2_Dose->Clone("TH2_Cont");
+	TH2_Cont->SetContour(4, contours);
+	TH2_Cont->SetLineColor(kWhite);
+	// TH2_Cont->SetLineWidth(1.8);
+	TH2_Cont->Draw("same cont3 list");
+
+	cDose->cd(3);
+	Dose_dist->SetTitle("");//Fluency map (particle/cm2)");
+	Dose_dist->SetTitleSize(0.0);
+	Dose_dist->SetStats(0);
+	Dose_dist->GetXaxis()->SetTitle("Dose");
+	Dose_dist->GetXaxis()->SetTickSize(0.01);
+	Dose_dist->GetXaxis()->SetTitleSize(0.036);
+	Dose_dist->GetXaxis()->CenterTitle();
+	Dose_dist->GetXaxis()->SetLabelSize(0.02);
+	Dose_dist->GetYaxis()->SetTitle("Nombre voxel");
+	Dose_dist->GetYaxis()->SetTickSize(0.01);
+	Dose_dist->GetYaxis()->SetTitleSize(0.036);
+	Dose_dist->GetYaxis()->CenterTitle();
+	Dose_dist->GetYaxis()->SetLabelSize(0.02);
+	Dose_dist->Draw("colz");
+
+	cDose->SaveAs("Picture/Dose_distribution.png");
+	
+	TH2_Dose->Delete();
+	TH2_Cont->Delete();
+	Dose_dist->Delete();
+	cDose->Destructor();
+}
+
 int main(int argc, char** argv)
 {
 	cout.precision(8);
@@ -2041,6 +2142,7 @@ int main(int argc, char** argv)
 	int tot_area=0;
 	int count_area=0;
 	int bin_up=1000;
+	int bin_down=3;
 	int voxel;
 	int bool_print=0;
 	int strip_min;
@@ -2114,6 +2216,7 @@ int main(int argc, char** argv)
 	double vect_rms_x2_area[MAX_SMPL];
 	double vect_rms_y2_area[MAX_SMPL];
 	double signal_time[MAX_SMPL][2];
+	double Map[N_STRIPS][N_STRIPS];
 
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_clean=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -2300,7 +2403,7 @@ int main(int argc, char** argv)
 						case LabelX:
 							val=charge-EOffX[j];
 							// if(in_area==0)
-							if(in_area==0&&(j>borne_m_x&&j<borne_M_x))
+							if(in_area==0&&(j>=borne_m_x&&j<=borne_M_x)) // taille du plastique
 								chargeTot_signal_X+=val;
 							// if(val<EOffX[j]*factor_eoff)
 							// 	val=0.; 
@@ -2311,7 +2414,7 @@ int main(int argc, char** argv)
 						case LabelY:
 							val=charge-EOffY[j];
 							// if(in_area==0)
-							if(in_area==0&&(j>borne_m_y&&j<borne_M_y))
+							if(in_area==0&&(j>=borne_m_y&&j<=borne_M_y)) // taille du plastique
 								chargeTot_signal_Y+=val;
 							// if(val<EOffY[j]*factor_eoff)
 							// 	val=0.; 
@@ -2400,14 +2503,13 @@ int main(int argc, char** argv)
 				rms_y=0.;
 				sum_x=0.;
 				sum_y=0.;
-				// sum_x=AreaX->GetSum();
-				// sum_y=AreaY->GetSum();
+
 				for(int i=0;i<N_STRIPS;i++)
+				// for(int i=borne_m_x;i<=borne_M_x;i++)
 				{
 					ii=i+1;
 					Profil_x_area->SetBinContent(i+1,AreaX->GetAt(i));
 					Profil_y_area->SetBinContent(i+1,AreaY->GetAt(i));
-					// cout<<i<<" "<<AreaX->GetAt(i)<<endl;
 					if(AreaX->GetAt(i)>Threshold)
 					{
 						mean_x+=ii*AreaX->GetAt(i);
@@ -2432,7 +2534,6 @@ int main(int argc, char** argv)
 					}
 				if(sum_x>0.)
 				{
-					// cout<<mean_x<<" "<<sum_x<<endl;
 					mean_x/=sum_x;
 					rms_x=sqrt(rms_x/sum_x-(mean_x*mean_x));
 				}
@@ -2494,8 +2595,8 @@ int main(int argc, char** argv)
 				// ampl=Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin());
 				// GaussProfilX->SetParameters(ampl,mean_x,rms_x);
 
-				i_cx=TMath::Max(2,Profil_x_area->GetMaximumBin()-5);
-				i_cy=TMath::Min(Profil_x_area->GetNbinsX()-2,Profil_x_area->GetMaximumBin()+5);
+				i_cx=TMath::Max(2,Profil_x_area->GetMaximumBin()-bin_down);
+				i_cy=TMath::Min(Profil_x_area->GetNbinsX()-2,Profil_x_area->GetMaximumBin()+bin_down);
 
 				Profil_x_area->SetTitle("");//Fluency map (particle/cm2)");
 				Profil_x_area->SetTitleSize(0.0);
@@ -2554,8 +2655,8 @@ int main(int argc, char** argv)
 				// ampl=Profil_y_area->GetBinContent(Profil_y_area->GetMaximumBin());
 				// GaussProfilY->SetParameters(ampl,mean_y,rms_y);
 
-				i_cx=TMath::Max(1,Profil_y_area->GetMaximumBin()-6);
-				i_cy=TMath::Min(Profil_y_area->GetNbinsX()-1,Profil_y_area->GetMaximumBin()+6);
+				i_cx=TMath::Max(1,Profil_y_area->GetMaximumBin()-bin_down);
+				i_cy=TMath::Min(Profil_y_area->GetNbinsX()-1,Profil_y_area->GetMaximumBin()+bin_down);
 
 				Profil_y_area->SetTitle("");//Fluency map (particle/cm2)");
 				Profil_y_area->SetTitleSize(0.0);
@@ -2813,7 +2914,7 @@ int main(int argc, char** argv)
 	line->SetLineWidth(1.5);
 	TArrow *arrow= new TArrow();
 	arrow->SetLineColor(6);
-	arrow->SetLineWidth(1.5);
+	arrow->SetLineWidth(3.);
 	if(tot_area>0)
 	{
 		TBox *box= new TBox();
@@ -2825,9 +2926,10 @@ int main(int argc, char** argv)
 		box->DrawBox(signal_time[tot_area-1][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,fin_eoff,TG_CCharge->GetYaxis()->GetXmax()/1.1);
 		for(int i=0;i<tot_area;i++)
 		{
+			double arrow_y=(TG_CCharge->GetYaxis()->GetXmax()-TG_CCharge->GetYaxis()->GetXmin())/3.+TG_CCharge->GetYaxis()->GetXmin();
 			line->DrawLine(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][0],TG_CCharge->GetYaxis()->GetXmax()/1.1);
 			line->DrawLine(signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmax()/1.1);
-			arrow->DrawArrow(signal_time[i][0],TG_CCharge->GetYaxis()->GetXmin()/1.15,signal_time[i][1],TG_CCharge->GetYaxis()->GetXmin()/1.15,0.005,"<>");
+			arrow->DrawArrow(signal_time[i][0],arrow_y,signal_time[i][1],arrow_y,0.01,"<>");
 		}
 	}
 
@@ -2891,19 +2993,14 @@ int main(int argc, char** argv)
 		Profil_x->SetBinContent(j+1,ProfilX[j]);
 		Profil_y->SetBinContent(j+1,ProfilY[j]);
 		for(int k=0;k<N_STRIPS;k++)
+		{
+			Map[j][k]=ProfilX[j]*ProfilY[k]/(sum_x*sum_y)*(sum_x+sum_y)/2.;
 			TH2_Map->SetBinContent(j+1,k+1,ProfilX[j]*ProfilY[k]/(sum_x*sum_y)*(sum_x+sum_y)/2.);
+		}
 	}
 
-	ampl=TH2_Map->GetBinContent(TH2_Map->GetMaximumBin());
-	mean_x=TH2_Map->GetMean(1);
-	mean_y=TH2_Map->GetMean(2);
-	rms_x=TH2_Map->GetRMS(1);
-	rms_y=TH2_Map->GetRMS(2);
-	// cout<<TH2_Map->GetBinContent(TH2_Map->GetMaximumBin())<<endl;
-	// cout<<TH2_Map->GetMean(1)<<" "<<Profil_x->GetMean(1)<<endl;
-	// cout<<TH2_Map->GetMean(2)<<" "<<Profil_y->GetMean(1)<<endl;
-	// cout<<TH2_Map->GetRMS(1)<<" "<<Profil_x->GetRMS(1)<<endl;
-	// cout<<TH2_Map->GetRMS(2)<<" "<<Profil_y->GetRMS(1)<<endl;
+	if(dosedistribution)
+		DoseDistribution(Map);
 
 	TCanvas *cMap= new TCanvas("Dose map");
 	cMap->SetCanvasSize(1000,1000);
@@ -2931,7 +3028,7 @@ int main(int argc, char** argv)
 	cMap->cd(2);
 	// bin_up=N_STRIPS;
 	TF2 *f2DGauss = new TF2("f2DGauss","[0]*TMath::Gaus(x,[1],[2])*TMath::Gaus(y,[3],[4])",1,33,1,33);
-	TF2 *f2D2Gauss = new TF2("f2D2Gauss","([0]*TMath::Gaus(x,[1],[2])+[3]*TMath::Gaus(x,[4],[5]))*([6]*TMath::Gaus(y,[7],[8])+[9]*TMath::Gaus(y,[10],[11]))/(([0]+[3])*([6]+[9]))*[12]",1,33,1,33);
+	TF2 *f2D2Gauss = new TF2("f2D2Gauss","([0]*TMath::Gaus(x,[1],[2])+[3]*TMath::Gaus(x,[4],[5]))*([6]*TMath::Gaus(y,[7],[8])+[9]*TMath::Gaus(y,[10],[11]))*[12]",1,33,1,33);
 	// TF2 *f2D2Gauss = new TF2("f2D2Gauss","([0]*TMath::Gaus(x,[1],[2])+[3]*TMath::Gaus(x,[4],[5]))*([6]*TMath::Gaus(y,[7],[8])+TMath::Gaus(y,[9],[10]))",1,33,1,33);
 	TH2F* TH2_Map_up=new TH2F("TH2_Map_up","Enhanced fluency map (particle/cm2)",bin_up,1,33,bin_up,1,33);
 	TH2F* TH2_Map_tmp=new TH2F();
@@ -2966,17 +3063,8 @@ int main(int argc, char** argv)
 			f2D2Gauss->SetParameter(9,vect_ampl_y2_area[i]);
 			f2D2Gauss->SetParameter(10,vect_mean_y2_area[i]);
 			f2D2Gauss->SetParameter(11,vect_rms_y2_area[i]);
-			f2D2Gauss->SetParameter(12,vect_ampl_area[i]);
-			// ampl_x=vect_ampl_x_area[i];
-			// ampl_y=vect_ampl_y_area[i];
-			// ampl_x2=vect_ampl_x2_area[i];
-			// ampl_y2=vect_ampl_y2_area[i];
-			// mean_x2=vect_mean_x2_area[i];
-			// mean_y2=vect_mean_y2_area[i];
-			// rms_x2=vect_rms_x2_area[i];
-			// rms_y2=vect_rms_y2_area[i];
-			// cout<<ampl_x<<" "<<ampl_x2<<" "<<ampl_y<<" "<<ampl_y2<<" "<<mean_x<<" "<<rms_x<<" "<<mean_x2<<" "<<rms_x2<<" "<<mean_y<<" "<<rms_y<<" "<<mean_y2<<" "<<rms_y2<<" "<<endl;
-			// f2D2Gauss->SetParameters(ampl_x,mean_x,rms_x,ampl_x2,mean_x2,rms_x2,ampl_y,mean_y,rms_y,ampl_y2,mean_y2);
+			ampl=vect_ampl_area[i]/((vect_ampl_x_area[i]+vect_ampl_x2_area[i])*(vect_ampl_y_area[i]+vect_ampl_y2_area[i]));
+			f2D2Gauss->SetParameter(12,ampl);
 			TH2_Map_tmp=((TH2F*)f2D2Gauss->GetHistogram());
 		}
 		for(int j=0;j<bin_up;j++)	for(int k=0;k<bin_up;k++)
@@ -3157,7 +3245,7 @@ int main(int argc, char** argv)
 		cout<<"Pas de données de calibrage"<<endl;
 
 	if(data_meas==1&&tot_area>0)
-		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area);
+		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area,chargeTot_signal_X,chargeTot_signal_Y);
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
 

@@ -49,6 +49,7 @@
 
 std::ofstream logfile;
 const bool logfileprint=true;
+const bool dosedistribution=true;
 
 std::vector<string> Variable_init;
 std::vector<double> Value_init;
