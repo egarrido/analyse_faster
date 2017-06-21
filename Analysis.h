@@ -43,8 +43,8 @@
 
 #include "Seuil_data.h"
 #include "Calibrage_data.h"
-// #include "Label_Arronax.h"
-#include "Label_CPO.h"
+#include "Label_Arronax.h"
+// #include "Label_CPO.h"
 // #include "Label_Cyrce.h"
 
 std::ofstream logfile;

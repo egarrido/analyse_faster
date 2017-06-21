@@ -379,7 +379,10 @@ double Calib_value(int area,int in_area,double e_part)
 	double calib_polynome;
 	if(in_area!=0)
 		return 0.;
-	return .01875;
+	// return .01875; //120 MeV
+	// return .01532; //160 MeV
+	return .01339; //196 MeV
+	// return .01322; //200 MeV
 	if(e_part==0.)
 		return 1000./calib_data[area];
 	else
