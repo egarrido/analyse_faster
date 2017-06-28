@@ -59,6 +59,7 @@ void EntryParameters(int config_simu)
 	{
 		cout<<"No entry parameters file for this configuration: "<<config_simu<<endl;
 		cout<<"No file: "<<filename<<endl;
+		exit(0);
 	}
 	else
 	{
@@ -191,13 +192,13 @@ void EntryParameters(int config_simu)
 		datafile_param.close();
 	}	
 
-	data_faster_file="../DATA/gaussian_0001.fast";
+	// data_faster_file="../DATA/gaussian_0001.fast";
 	filename=path_file+data_file; 
 	ifstream datafile_faster(filename.c_str());
 	if(!datafile_faster)
 	{
 		cout<<"No data file: "<<filename<<endl;
-		cout<<"Keeping the default one: "<<data_faster_file<<". Maybe check the entry file."<<endl;
+		exit(0);
 	}
 	else
 		data_faster_file=filename;
@@ -249,9 +250,14 @@ void EntryParameters(int config_simu)
 	calibrage_used=Value_init[ivar];
 
 	ivar=8;
-	if(Value_init[ivar]==0)
+	if(Value_init[ivar]<0.)
 		cout<<" Multiple energies for primary particles"<<endl;
-	else
+	if(Value_init[ivar]==0.)
+	{
+		cout<<" No energy for the primary particles"<<endl;
+		dosedistribution=false;
+	}
+	if(Value_init[ivar]>0.)
 		cout<<" Energy of the particles: "<<Value_init[ivar]<<endl;
 	energy=Value_init[ivar];
 
@@ -318,9 +324,11 @@ void EntryParameters(int config_simu)
 			logfile<<" Arronax calibration values used"<<endl;
 
 		ivar=8;
-		if(Value_init[ivar]==0)
+		if(Value_init[ivar]<0.)
 			logfile<<" Multiple energies for primary particles"<<endl;
-		else
+		if(Value_init[ivar]==0)
+			logfile<<" No energy for the primary particles"<<endl;
+		if(Value_init[ivar]>0.)
 			logfile<<" Energy of the particles: "<<Value_init[ivar]<<endl;
 
 		ivar=4;
@@ -2317,7 +2325,7 @@ int main(int argc, char** argv)
 
 	// ofstream errrel("Output.txt",std::ios::out);
 
-	int config_simu=1;
+	int config_simu=0;
 	if(argc>1)
 		config_simu=(int)atof(argv[1]);
 
@@ -2334,7 +2342,7 @@ int main(int argc, char** argv)
 	{
 		printf ("Error opening file %s\n", filename);
 		faster_file_reader_close(reader);
-		return 0;
+		exit(0);
 	}
 	else
 		printf("Fichier de données bien ouvert\n");

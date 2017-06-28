@@ -49,7 +49,6 @@
 
 std::ofstream logfile;
 const bool logfileprint=true;
-const bool dosedistribution=true;
 
 std::vector<string> Variable_init;
 std::vector<double> Value_init;
@@ -76,6 +75,7 @@ const int MAX_SMPL=1000;
 const int MAX_INTEGR=1000000;
 const double strip_width=.3; //cm
 
+bool dosedistribution=true;
 int bkgnd_param=0;
 int Gausstofit=1;
 int calibrage_used=0;
