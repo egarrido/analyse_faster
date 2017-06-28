@@ -382,43 +382,32 @@ double Extremum(double a,double b,double c,double d,double e)
 	return extrm;
 }
 
-double Calib_value(int area,int in_area,double e_part)
+double TEL_value(int material,double e_part)
 {
-	double calib_polynome;
-	if(in_area!=0)
-		return 0.;
-	// return .01875; //120 MeV
-	// return .01532; //160 MeV
-	return .01339; //196 MeV
-	// return .01322; //200 MeV
-	if(e_part==0.)
-		return 1000./calib_data[area];
-	else
-	{
-		calib_polynome=calib_par[0]+calib_par[1]*e_part+calib_par[2]*pow(e_part,2)+calib_par[3]*pow(e_part,3);
-		return 1000./calib_polynome;
-	}
-}
-
-double TEL_value(double e_part)
-{
-	const double uma_MeV_c2=931.49;	// atomic mass unit in MeV/c2
-	const double c=2.9971e8;	// speed of ligth in m/s
-	const double me_kg=9.1094e-31;	// electron mass
-	const double me_MeV_c2=0.510998; // MeV/c2
-	const double q=1.6022e-19;	// electronic charge in C
-	const double Na=6.0222e23;	// Avogadro number in mol-1
-	const double e0=8.8542e-12;	// Vaccum permitivity (F/m)
-
 	double Z_part=1.;
 	double dEdX=0.;
-	// Water
-	double density=1.e6;
-	double Zeff_mat=10.;
-	double Aeff_mat=18.;
-	double Ieff_mat=69.*1.E-6; // MeV
+	double density;
+	double Zeff_mat;
+	double Aeff_mat;
+	double Ieff_mat;
+	if(material==0)
+	{
+		// Air
+		density=1.2e-3;
+		Zeff_mat=737.5;
+		Aeff_mat=1480.2;
+		Ieff_mat=85.7*1.E-6; // MeV
+	}
+	if(material==1)
+	{
+		// Water
+		density=1.e6;
+		Zeff_mat=10.;
+		Aeff_mat=18.;
+		Ieff_mat=69.*1.E-6; // MeV
+	}
 	double N=Na*density*Zeff_mat/Aeff_mat;
-	
+
 	if(e_part>0.)
 	{
 		double beta=TMath::Sqrt(1-1/TMath::Power(1+e_part/uma_MeV_c2,2));
@@ -430,6 +419,61 @@ double TEL_value(double e_part)
 	}
 	dEdX=TMath::Max(0.,dEdX);
 	return dEdX; //in keV.um-1
+}
+
+double Loss_value(double e_part,double density)
+{    
+	int A_part=1;
+	double Z_part=1.;
+	double dEdX=0.;
+	double e_loss=0.;
+
+	double gap=3.*2.;
+	double e_part_loss=e_part;
+
+	double length_left=gap*1000.;
+	double dx=1./density; //um
+	
+	if(dx>1.)
+		dx=1.;
+
+	while(length_left>0.&&e_part_loss>0.)
+	{
+		dEdX=TEL_value(0,e_part_loss)/1000.;	// MeV
+		if(length_left<dx)
+			dx=length_left;
+		if(e_part_loss>dEdX*dx/A_part)
+		{
+			e_loss+=dEdX*dx; //convert
+			e_part_loss-=dEdX*dx/A_part;
+		}
+		else
+		{
+			e_loss+=e_part_loss*A_part; //convert
+			e_part_loss=0;
+		}
+		length_left-=dx;
+	}
+	return e_loss;
+}
+
+double Calib_value(int area,int in_area,double e_part)
+{
+	double calib_polynome;
+	if(in_area!=0)
+		return 0.;
+	// return .01875; //120 MeV
+	// return .01532; //160 MeV
+	// return .01339; //196 MeV
+	// return .01322; //200 MeV
+	return Loss_value(e_part,1.2e-3)/W_air*q*1.E15;
+	if(e_part==0.)
+		return 1000./calib_data[area];
+	else
+	{
+		calib_polynome=calib_par[0]+calib_par[1]*e_part+calib_par[2]*pow(e_part,2)+calib_par[3]*pow(e_part,3);
+		return 1000./calib_polynome;
+	}
 }
 
 void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
@@ -2068,7 +2112,7 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	double mean_dose=0.;
 	double rms_dose=0.;
 	double calib=Calib_value(0,0,energy)*pow(strip_width,2)/1000.;
-	double TEL=TEL_value(energy);
+	double TEL=TEL_value(1,energy);
 	double pC_to_Gy=TEL/calib;
 	double Dose[N_STRIPS][N_STRIPS];
 	// cout<<TEL<<" "<<calib<<endl;
@@ -3361,6 +3405,8 @@ int main(int argc, char** argv)
 	faster_file_reader_close(reader);
 	free(filename);
 	rootfile->Close();
+
+	cout<<Calib_value(0,0,energy)<<endl;
 
 	// errrel.close();
 	if(logfileprint==true)

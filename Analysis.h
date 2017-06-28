@@ -65,6 +65,14 @@ string data_faster_file;
 string data_audio_file;
 
 const double epsilon=1.E-9;
+const double uma_MeV_c2=931.49;	// atomic mass unit in MeV/c2
+const double c=2.9971e8;	// speed of ligth in m/s
+const double me_kg=9.1094e-31;	// electron mass
+const double me_MeV_c2=0.510998; // MeV/c2
+const double q=1.6022e-19;	// electronic charge in C
+const double Na=6.0222e23;	// Avogadro number in mol-1
+const double e0=8.8542e-12;	// Vaccum permitivity (F/m)
+const double W_air=34.5e-6; //MeV 
 
 const int N_box_per_irradation_max=5000;
 const int N_STRIPS=32;
