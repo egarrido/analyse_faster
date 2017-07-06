@@ -45,9 +45,9 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	9
 	Variable_init.push_back("Integration steps"); // 10
 	Value_init.push_back(0.);	//	10
-	Variable_init.push_back("Boundaries"); // 11
+	Variable_init.push_back("Boundaries (s)"); // 11
 	Value_init.push_back(0.);	//	11
-	Variable_init.push_back("Acquisition time for electronic offset"); // 12
+	Variable_init.push_back("Acquisition time for electronic offset (s)"); // 12
 	Value_init.push_back(0.);	//	12
 	Variable_init.push_back("Gaussian to fit"); // 13
 	Value_init.push_back(0.);	//	13
@@ -117,6 +117,8 @@ void EntryParameters(int config_simu)
 							Value_init[ind_value]=1;
 						if(!buffer.compare("proton_Arronax"))
 							Value_init[ind_value]=2;
+						if(!buffer.compare("proton_Arronax_68_MeV"))
+							Value_init[ind_value]=3;
 					}
 					if(ind_value==8)
 					{
@@ -247,6 +249,8 @@ void EntryParameters(int config_simu)
 		cout<<" Cyrce calibration values used"<<endl;
 	if(Value_init[ivar]==2)
 		cout<<" Arronax calibration values used"<<endl;
+	if(Value_init[ivar]==3)
+		cout<<" Arronax calibration value used for 68 MeV protons"<<endl;
 	calibrage_used=Value_init[ivar];
 
 	ivar=8;
@@ -322,6 +326,8 @@ void EntryParameters(int config_simu)
 			logfile<<" Cyrce calibration values used"<<endl;
 		if(Value_init[ivar]==2)
 			logfile<<" Arronax calibration values used"<<endl;
+		if(Value_init[ivar]==3)
+			logfile<<" Arronax calibration value used for 68 MeV protons"<<endl;
 
 		ivar=8;
 		if(Value_init[ivar]<0.)
@@ -361,10 +367,7 @@ void EntryParameters(int config_simu)
 
 	SamplingTime=Value_init[4];
 	IntegrationStep=(int)Value_init[10];
-	if(bkgnd_param==3)
-		data_folder="Output/"+data_file+".function";
-	else
-		data_folder="Output/"+data_file;
+	data_folder="Output/"+data_file;
 }
 
 double Extremum(double a,double b,double c,double d,double e)
@@ -401,12 +404,12 @@ double TEL_value(int material,double e_part)
 	if(material==1)
 	{
 		// Water
-		density=1.e6;
+		density=1.;
 		Zeff_mat=10.;
 		Aeff_mat=18.;
 		Ieff_mat=69.*1.E-6; // MeV
 	}
-	double N=Na*density*Zeff_mat/Aeff_mat;
+	double N=Na*density*1.e6*Zeff_mat/Aeff_mat;
 
 	if(e_part>0.)
 	{
@@ -422,7 +425,7 @@ double TEL_value(int material,double e_part)
 }
 
 double Loss_value(double e_part,double density)
-{    
+{
 	int A_part=1;
 	double Z_part=1.;
 	double dEdX=0.;
@@ -462,11 +465,16 @@ double Calib_value(int area,int in_area,double e_part)
 	double calib_polynome;
 	if(in_area!=0)
 		return 0.;
+
+	if(calibrage_used==3)
+		return 0.028431749; //68 MeV p+ Arronax
+
+	return 0.;
 	// return .01875; //120 MeV
 	// return .01532; //160 MeV
 	// return .01339; //196 MeV
 	// return .01322; //200 MeV
-	return Loss_value(e_part,1.2e-3)/W_air*q*1.E15;
+	// return Loss_value(e_part,1.2e-3)/W_air*q*1.E15;
 	if(e_part==0.)
 		return 1000./calib_data[area];
 	else
@@ -816,6 +824,15 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 			offXY[i][0]=0.;
 			offXY[i][1]=0.;
 		}
+
+	if(bkgnd_param==0)
+	{
+		ifstream eoff_in_file("Offset.txt");
+		int tmp;
+		for(int i=0;i<N_STRIPS;i++)
+			eoff_in_file>>tmp>>offXY[i][0]>>offXY[i][1];
+		eoff_in_file.close();
+	}
 
 	TCanvas *cEOff = new TCanvas("Electronique offset");
 	cEOff->SetCanvasSize(2000,1000);
@@ -2212,6 +2229,11 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 		Texte->DrawText(xt,yt,"Particule : proton");
 		yt-=ydecal;
 	}
+	if(calibrage_used==3)
+	{
+		Texte->DrawText(xt,yt,"Particule : 68 MeV proton");
+		yt-=ydecal;
+	}
 	text_tmp.Form("Energie : %2.2lf MeV",energy);
 	Texte->DrawText(xt,yt,text_tmp);
 	yt-=ydecal;
@@ -2267,7 +2289,7 @@ int main(int argc, char** argv)
 	PreSFB.resize(N_STRIPS);
 	PostSFB.resize(N_STRIPS);
 
-	TFile* rootfile=new TFile("Output/PostAnalysis.root","RECREATE");
+	TFile* rootfile=new TFile("./PostAnalysis.root","RECREATE");
 	TText* Texte=new TText();
 	TString name_area;
 	TString text_tmp;
@@ -2275,6 +2297,8 @@ int main(int argc, char** argv)
 	int data_calib=0;
 	int data_meas=0;
 	int count_tot=0;
+	int count_int=0;
+	int integration;
 	int npeak;
 	int ii;
 	int i_cx;
@@ -2285,7 +2309,7 @@ int main(int argc, char** argv)
 	int tot_area=0;
 	int count_area=0;
 	int bin_up=1000;
-	int bin_down=3;
+	int bin_down=2;
 	int voxel;
 	int bool_print=0;
 	int strip_min;
@@ -2301,18 +2325,10 @@ int main(int argc, char** argv)
 	double val;
 	double charge;
 	double ampl;
-	double ampl_x;
-	double ampl_y;
-	double ampl_x2;
-	double ampl_y2;
 	double mean_x;
 	double mean_y;
 	double rms_x;
 	double rms_y;
-	double mean_x2;
-	double mean_y2;
-	double rms_x2;
-	double rms_y2;
 	double xt;
 	double yt;
 	double ydecal=.04;
@@ -2322,6 +2338,8 @@ int main(int argc, char** argv)
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
+	double charge_X_int=0.;
+	double charge_Y_int=0.;
 	double Threshold=0.005;//500.*(fC_per_particle/1000.); /// signal equivalent to 500 particle passing through
 	double factor_eoff=.00001;
 	double par[6];
@@ -2362,9 +2380,11 @@ int main(int argc, char** argv)
 	double Map[N_STRIPS][N_STRIPS];
 
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_time_int=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_clean=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_cumul=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_fluence_cumul=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_intensity_inst=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* matrix_fluence=(double*)malloc(bin_up*bin_up*sizeof(double));
 
 	// ofstream errrel("Output.txt",std::ios::out);
@@ -2375,6 +2395,7 @@ int main(int argc, char** argv)
 
 	EntryParameters(config_simu);
 	strcpy(filename,data_faster_file.c_str());
+	integration=IntegrationStep;
 	
 	char command_line[80];
 	sprintf(command_line,"faster_disfast %s -I",filename);
@@ -2470,7 +2491,7 @@ int main(int argc, char** argv)
 
 			mid_signal=signal_time[count_area][0]+(signal_time[count_area][1]-signal_time[count_area][0])/2.;
 			if(count_area>=tot_area)
-				mid_signal==DBL_MAX;
+				mid_signal=DBL_MAX;
 
 			if(bkgnd_param==3)
 			{
@@ -2545,8 +2566,8 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
-							// if(in_area==0)
-							if(in_area==0&&(j>=borne_m_x&&j<=borne_M_x)) // taille du plastique
+							if(in_area==0)
+							// if(in_area==0&&(j>=borne_m_x&&j<=borne_M_x)) // taille du plastique
 								chargeTot_signal_X+=val;
 							// if(val<EOffX[j]*factor_eoff)
 							// 	val=0.; 
@@ -2556,8 +2577,8 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
-							// if(in_area==0)
-							if(in_area==0&&(j>=borne_m_y&&j<=borne_M_y)) // taille du plastique
+							if(in_area==0)
+							// if(in_area==0&&(j>=borne_m_y&&j<=borne_M_y)) // taille du plastique
 								chargeTot_signal_Y+=val;
 							// if(val<EOffY[j]*factor_eoff)
 							// 	val=0.; 
@@ -2608,12 +2629,32 @@ int main(int argc, char** argv)
 				else
 					vect_charge_cumul[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.;
 
-				// calib_factor=Calib_value(count_area,in_area,energy);
-				calib_factor=1.;
+				calib_factor=Calib_value(count_area,in_area,energy)*pow(strip_width,2)/1000.;
+				if(calib_factor!=0.)
+					calib_factor=1./calib_factor;
+				// calib_factor=1.;
+	
 				if(count_tot>0)
 					vect_fluence_cumul[count_tot]=vect_fluence_cumul[count_tot-1]+(ChX->GetSum()+ChY->GetSum())/2.*calib_factor;
 				else
 					vect_fluence_cumul[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.*calib_factor;
+
+				if(count_tot%integration==(integration-1))
+				{
+					vect_time_int[count_int]=vect_time_tot[count_tot];
+					if(count_int>0)
+						vect_intensity_inst[count_int]=(charge_X_int+charge_Y_int)/2.*calib_factor*pow(strip_width,2)*q/(vect_time_int[count_int]-vect_time_int[count_int-1])*1.E15;
+					else	
+						vect_intensity_inst[count_int]=0.;
+					charge_X_int=ChX->GetSum();
+					charge_Y_int=ChY->GetSum();
+					count_int++;
+				}
+				else
+				{
+					charge_X_int+=ChX->GetSum();
+					charge_Y_int+=ChY->GetSum();
+				}
 
 				chargeTot_pC+=(sum_x+sum_y)/2.;
 				count_tot++;
@@ -2725,15 +2766,6 @@ int main(int argc, char** argv)
 				TH2_Area->Draw("colz");
 
 				cArea->cd(3);
-				TSpectrum* spect_x_area=new TSpectrum();
-				npeak=spect_x_area->Search(Profil_x_area,2,"",0.10);
-				if(npeak==1)
-				{
-					PeakX=spect_x_area->GetPositionX();
-					mean_x=PeakX[0];
-				}
-				else
-					mean_x=Profil_x_area->GetMaximumBin();
 				i_cx=ceil(mean_x);
 				ampl=Profil_x_area->GetBinContent(Profil_x_area->GetBin(i_cx));
 				// ampl=Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin());
@@ -2782,18 +2814,8 @@ int main(int argc, char** argv)
 
 				GaussProfilX->Delete();
 				Gauss2ProfilX->Delete();
-				spect_x_area->Delete();
 
 				cArea->cd(4);
-				TSpectrum* spect_y_area=new TSpectrum();
-				npeak=spect_y_area->Search(Profil_y_area,2,"",0.10);
-				if(npeak==1)
-				{
-					PeakX=spect_y_area->GetPositionX();
-					mean_y=PeakX[0];
-				}
-				else
-					mean_y=Profil_y_area->GetMaximumBin();
 				i_cy=ceil(mean_y);
 				ampl=Profil_y_area->GetBinContent(Profil_y_area->GetBin(i_cy));
 				// ampl=Profil_y_area->GetBinContent(Profil_y_area->GetMaximumBin());
@@ -2842,7 +2864,6 @@ int main(int argc, char** argv)
 
 				GaussProfilY->Delete();
 				Gauss2ProfilY->Delete();
-				spect_y_area->Delete();
 				g2->Delete();
 
 				cArea->cd(2);
@@ -2926,10 +2947,6 @@ int main(int argc, char** argv)
 				{
 					TH1F* Profil_x_smpl=new TH1F("Profil_x_area","X profile in number of particles",N_STRIPS,1,33);
 					TH1F* Profil_y_smpl=new TH1F("Profil_y_area","Y profile in number of particles",N_STRIPS,1,33);
-					TF1* GaussProfilX=new TF1("GaussProfilX","gaus",2,32);
-					TF1* GaussProfilY=new TF1("GaussProfilY","gaus",2,32);
-					GaussProfilX->SetNpx(1000);
-					GaussProfilY->SetNpx(1000);
 					
 					mean_x=0.;
 					mean_y=0.;
@@ -2980,29 +2997,10 @@ int main(int argc, char** argv)
 					vect_time_spl[nbSummedSample]=fasterTime;
 					vect_charge_t_spl[nbSummedSample]=(sum_x+sum_y)/2.;
 
-					TSpectrum* spect_x_smpl=new TSpectrum();
-					npeak=spect_x_smpl->Search(Profil_x_smpl,2,"",0.10);
-					if(npeak==1)
-					{
-						PeakX=spect_x_smpl->GetPositionX();
-						mean_x=PeakX[0];
-					}
 					vect_mean_x[nbSummedSample]=mean_x;
 					vect_rms_x[nbSummedSample]=rms_x;
-					GaussProfilX->Delete();
-					spect_x_smpl->Delete();
-
-					TSpectrum* spect_y_smpl=new TSpectrum();
-					npeak=spect_y_smpl->Search(Profil_y_smpl,2,"",0.10);
-					if(npeak==1)
-					{
-						PeakX=spect_y_smpl->GetPositionX();
-						mean_y=PeakX[0];
-					}
 					vect_mean_y[nbSummedSample]=mean_y;
 					vect_rms_y[nbSummedSample]=rms_y;
-					GaussProfilY->Delete();
-					spect_y_smpl->Delete();
 
 					SamplX->Reset();
 					SamplY->Reset();
@@ -3015,6 +3013,7 @@ int main(int argc, char** argv)
 		}
 	}
 	count_tot--;
+	count_int--;
 
 	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
 	for(int i=0;i<tot_area;i++)
@@ -3032,8 +3031,8 @@ int main(int argc, char** argv)
 	TH1F* Profil_y=new TH1F("ProfY","Y profile in number of particles",N_STRIPS,1,33);
 
 	TCanvas *cCCharge= new TCanvas("Charge over time");
-	cCCharge->SetCanvasSize(2000,1500);
-	cCCharge->Divide(1,3);
+	cCCharge->SetCanvasSize(2000,2000);
+	cCCharge->Divide(1,4);
 
 	cCCharge->cd(1);
 	TGraph *TG_CCharge=new TGraph(count_tot,vect_time_tot,vect_charge_clean);
@@ -3061,13 +3060,16 @@ int main(int argc, char** argv)
 	arrow->SetLineWidth(3.);
 	if(tot_area>0)
 	{
-		TBox *box= new TBox();
-		box->SetFillStyle(0);
-		box->SetLineColor(6);
-		box->SetLineWidth(2);
-		box->SetLineStyle(5);
-		box->DrawBox(debut_eoff,TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[0][0],TG_CCharge->GetYaxis()->GetXmax()/1.1);
-		box->DrawBox(signal_time[tot_area-1][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,fin_eoff,TG_CCharge->GetYaxis()->GetXmax()/1.1);
+		if(bkgnd_param==1&&bkgnd_param==3)
+		{
+			TBox *box= new TBox();
+			box->SetFillStyle(0);
+			box->SetLineColor(6);
+			box->SetLineWidth(2);
+			box->SetLineStyle(5);
+			box->DrawBox(debut_eoff,TG_CCharge->GetYaxis()->GetXmin()/1.1,signal_time[0][0],TG_CCharge->GetYaxis()->GetXmax()/1.1);
+			box->DrawBox(signal_time[tot_area-1][1],TG_CCharge->GetYaxis()->GetXmin()/1.1,fin_eoff,TG_CCharge->GetYaxis()->GetXmax()/1.1);
+		}
 		for(int i=0;i<tot_area;i++)
 		{
 			double arrow_y=(TG_CCharge->GetYaxis()->GetXmax()-TG_CCharge->GetYaxis()->GetXmin())/3.+TG_CCharge->GetYaxis()->GetXmin();
@@ -3081,7 +3083,7 @@ int main(int argc, char** argv)
 	TGraph *TG_CumulCharge=new TGraph(count_tot,vect_time_tot,vect_charge_cumul);
 	TG_CumulCharge->SetMarkerColor(2);
 	TG_CumulCharge->SetLineColor(2);
-	TG_CumulCharge->SetLineWidth(1.5);
+	TG_CumulCharge->SetLineWidth(2.);
 	TG_CumulCharge->SetTitle("Charge cumul over time");
 	TG_CumulCharge->GetXaxis()->SetTitle("Time (s)");
 	TG_CumulCharge->GetXaxis()->SetTickSize(0.01);
@@ -3098,14 +3100,14 @@ int main(int argc, char** argv)
 	cCCharge->cd(3);
 	TGraph *TG_CumulFluence=new TGraph(count_tot,vect_time_tot,vect_fluence_cumul);
 	TG_CumulFluence->SetMarkerColor(2);
-	TG_CumulFluence->SetLineColor(2);
-	TG_CumulFluence->SetLineWidth(1.5);
+	TG_CumulFluence->SetLineColor(4);
+	TG_CumulFluence->SetLineWidth(2.);
 	TG_CumulFluence->SetTitle("Fluence cumul over time");
 	TG_CumulFluence->GetXaxis()->SetTitle("Time (s)");
 	TG_CumulFluence->GetXaxis()->SetTickSize(0.01);
 	TG_CumulFluence->GetXaxis()->SetTitleSize(0.06);
 	TG_CumulFluence->GetXaxis()->SetLabelSize(0.05);
-	TG_CumulFluence->GetYaxis()->SetTitle("Nbr. particles");
+	TG_CumulFluence->GetYaxis()->SetTitle("Particles/cm2");
 	TG_CumulFluence->GetYaxis()->SetTickSize(0.01);
 	TG_CumulFluence->GetYaxis()->SetTitleSize(0.06);
 	TG_CumulFluence->GetYaxis()->CenterTitle();
@@ -3113,16 +3115,37 @@ int main(int argc, char** argv)
 	TG_CumulFluence->Write("Fluence_cumul");
 	TG_CumulFluence->Draw("AL");
 
+	cCCharge->cd(4);
+	TGraph *TG_IntensInst=new TGraph(count_int,vect_time_int,vect_intensity_inst);
+	TG_IntensInst->SetMarkerColor(4);
+	TG_IntensInst->SetLineColor(4);
+	TG_IntensInst->SetLineWidth(1.5);
+	TG_IntensInst->SetTitle("Intensity");
+	TG_IntensInst->GetXaxis()->SetTitle("Time (s)");
+	TG_IntensInst->GetXaxis()->SetTickSize(0.01);
+	TG_IntensInst->GetXaxis()->SetTitleSize(0.06);
+	TG_IntensInst->GetXaxis()->SetLabelSize(0.05);
+	TG_IntensInst->GetYaxis()->SetTitle("Intensity (fA)");
+	TG_IntensInst->GetYaxis()->SetTickSize(0.01);
+	TG_IntensInst->GetYaxis()->SetTitleSize(0.06);
+	TG_IntensInst->GetYaxis()->CenterTitle();
+	TG_IntensInst->GetYaxis()->SetLabelSize(0.05);
+	TG_IntensInst->Write("Intensity");
+	TG_IntensInst->Draw("AL");
+
 	cCCharge->SaveAs("Picture/Charge_clean.png");
 
 	TG_CCharge->Delete();
 	TG_CumulCharge->Delete();
 	TG_CumulFluence->Delete();
+	TG_IntensInst->Delete();
 	cCCharge->Destructor();
 	free(vect_time_tot);
+	free(vect_time_int);
 	free(vect_charge_clean);
 	free(vect_charge_cumul);
 	free(vect_fluence_cumul);
+	free(vect_intensity_inst);
 
 	sum_x=0.;
 	sum_y=0.;
@@ -3406,8 +3429,6 @@ int main(int argc, char** argv)
 	free(filename);
 	rootfile->Close();
 
-	cout<<Calib_value(0,0,energy)<<endl;
-
 	// errrel.close();
 	if(logfileprint==true)
 	{
@@ -3422,7 +3443,7 @@ int main(int argc, char** argv)
 	system(Execution);
 	sprintf(Execution,"cp Picture/*.png %s/",data_folder.c_str());
 	system(Execution);
-	sprintf(Execution,"cp Output/PostAnalysis.root %s/",data_folder.c_str());
+	sprintf(Execution,"cp PostAnalysis.root %s/",data_folder.c_str());
 	system(Execution);
 	if(logfileprint==true)
 	{

@@ -1,14 +1,14 @@
-File: 196MeV_200UM_0001.fast
-Path for the file: /home/garrido/Dosion/CPO_05_2017/
-Background extraction (yes/no sub/function/default): yes
+File: Acq_1_trav_500pA_0001.fast
+Path for the file: /home/garrido/Dosion/Arronax/06_2017/
+Background extraction (yes/no sub/function/default): function
 Irradiation area finding way (charge/derivative/quanta/manual): charge
-Boundaries: 30. 60.
-Threshold: 41000
-Exclusion strips X: 8 25
-Exclusion strips Y: 8 25 
-Calibrate particle: proton_Cyrce
-Particle energy: 196.
-Time sampling (s): 100000.
-Acquisition time for electronic offset: 20.
+Boundaries (s): 21. 39.
+Threshold: 40400.
+Exclusion strips X: 11 21
+Exclusion strips Y: 13 23 
+Calibrate particle: proton_Arronax_68_MeV
+Particle energy: 0.
+Time sampling (s): 1.
+Acquisition time for electronic offset (s): 20.
 Integration steps: 50
 Gaussian to fit: 1

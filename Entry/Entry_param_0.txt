@@ -1,14 +1,14 @@
-File: acquis_9_dosion_24022017_0001.fast
-Path for the file: /home/garrido/Dosion/Arronax_02_2017/
+File: Calib_1_0001.fast
+Path for the file: /home/garrido/Dosion/Arronax/06_2017/
 Background extraction (yes/no sub/function/default): yes
-Irradiation area finding way (charge/derivative/quanta/manual): charge
-Boundaries: 21. 39.
-Threshold: 40600.
+Irradiation area finding way (charge/derivative/quanta/manual): quanta
+Boundaries (s): 21. 39.
+Threshold: 500.
 Exclusion strips X: 13 21
 Exclusion strips Y: 13 21 
-Calibrate particle: proton_Cyrce
+Calibrate particle: proton_Arronax_68_MeV
 Particle energy: 0.
 Time sampling (s): 10000.
-Acquisition time for electronic offset: 20.
+Acquisition time for electronic offset (s): 20.
 Integration steps: 50
 Gaussian to fit: 1
