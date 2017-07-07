@@ -2376,6 +2376,8 @@ int main(int argc, char** argv)
 	double vect_mean_y2_area[MAX_SMPL];
 	double vect_rms_x2_area[MAX_SMPL];
 	double vect_rms_y2_area[MAX_SMPL];
+	double vect_fwhm_x_area[MAX_SMPL];
+	double vect_fwhm_y_area[MAX_SMPL];
 	double signal_time[MAX_SMPL][2];
 	double Map[N_STRIPS][N_STRIPS];
 
@@ -2671,6 +2673,7 @@ int main(int argc, char** argv)
 				name_area="TH2_Area_";
 				name_area+=(count_area+1);
 				TH2F* TH2_Area=new TH2F(name_area,"Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
+				TH1F* FWHM=new TH1F("FWHM","FWHM",bin_up,1,33);
 				TH1F* Profil_x_area=new TH1F("Profil_x_area","X profile in number of particles",N_STRIPS,1,33);
 				TH1F* Profil_y_area=new TH1F("Profil_y_area","Y profile in number of particles",N_STRIPS,1,33);
 				TF1* GaussProfilX=new TF1("GaussProfilX","gaus",2,32);
@@ -2680,6 +2683,8 @@ int main(int argc, char** argv)
 				TF1* Gauss2ProfilY=new TF1("Gauss2ProfilY","gaus(0)+gaus(3)",1,33);
 				GaussProfilX->SetNpx(bin_up);
 				GaussProfilY->SetNpx(bin_up);
+				Gauss2ProfilX->SetNpx(bin_up);
+				Gauss2ProfilY->SetNpx(bin_up);
 				g2->SetNpx(bin_up);
 
 				mean_x=0.;
@@ -2788,14 +2793,15 @@ int main(int argc, char** argv)
 				Profil_x_area->GetYaxis()->SetTitleSize(0.036);	
 				Profil_x_area->GetYaxis()->CenterTitle();
 				Profil_x_area->GetYaxis()->SetLabelSize(0.02);
-				Profil_x_area->GetYaxis()->SetRangeUser(0,Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin())*1.05);
 				Profil_x_area->Draw();
 				Profil_x_area->Fit(GaussProfilX,"Q0","",i_cx,i_cy);
 				if(Gausstofit==1)
 				{
 					Profil_x_area->Fit(GaussProfilX,"QR");
+					vect_ampl_x_area[count_area]=GaussProfilX->GetParameter(0);
 					vect_mean_x_area[count_area]=GaussProfilX->GetParameter(1);
 					vect_rms_x_area[count_area]=GaussProfilX->GetParameter(2);
+					FWHM=(TH1F*)GaussProfilX->GetHistogram()->Clone();
 				}
 				if(Gausstofit==2)
 				{
@@ -2810,10 +2816,15 @@ int main(int argc, char** argv)
 					vect_ampl_x2_area[count_area]=Gauss2ProfilX->GetParameter(3);
 					vect_mean_x2_area[count_area]=Gauss2ProfilX->GetParameter(4);
 					vect_rms_x2_area[count_area]=Gauss2ProfilX->GetParameter(5);
+					FWHM=(TH1F*)Gauss2ProfilX->GetHistogram()->Clone();
 				}
+				Profil_x_area->GetYaxis()->SetRangeUser(0,TMath::Max(Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin()),FWHM->GetMaximum())*1.05);
+				vect_fwhm_x_area[count_area]=FWHM->GetBinCenter(FWHM->FindLastBinAbove(FWHM->GetMaximum()/2.))
+																		-FWHM->GetBinCenter(FWHM->FindFirstBinAbove(FWHM->GetMaximum()/2.));
 
 				GaussProfilX->Delete();
 				Gauss2ProfilX->Delete();
+				FWHM->Clear();
 
 				cArea->cd(4);
 				i_cy=ceil(mean_y);
@@ -2838,14 +2849,15 @@ int main(int argc, char** argv)
 				Profil_y_area->GetYaxis()->SetTitleSize(0.036);
 				Profil_y_area->GetYaxis()->CenterTitle();
 				Profil_y_area->GetYaxis()->SetLabelSize(0.02);
-				Profil_y_area->GetYaxis()->SetRangeUser(0,Profil_y_area->GetBinContent(Profil_y_area->GetMaximumBin())*1.05);
 				Profil_y_area->Draw();
 				Profil_y_area->Fit(GaussProfilY,"Q0","",i_cx,i_cy);
 				if(Gausstofit==1)
 				{
 					Profil_y_area->Fit(GaussProfilY,"QR");
+					vect_ampl_y_area[count_area]=GaussProfilY->GetParameter(0);
 					vect_mean_y_area[count_area]=GaussProfilY->GetParameter(1);
 					vect_rms_y_area[count_area]=GaussProfilY->GetParameter(2);
+					FWHM=(TH1F*)GaussProfilY->GetHistogram()->Clone();
 				}
 				if(Gausstofit==2)
 				{
@@ -2860,10 +2872,15 @@ int main(int argc, char** argv)
 					vect_ampl_y2_area[count_area]=Gauss2ProfilY->GetParameter(3);
 					vect_mean_y2_area[count_area]=Gauss2ProfilY->GetParameter(4);
 					vect_rms_y2_area[count_area]=Gauss2ProfilY->GetParameter(5);
+					FWHM=(TH1F*)Gauss2ProfilY->GetHistogram()->Clone();
 				}
+				Profil_y_area->GetYaxis()->SetRangeUser(0,TMath::Max(Profil_y_area->GetBinContent(Profil_y_area->GetMaximumBin()),FWHM->GetMaximum())*1.05);
+				vect_fwhm_y_area[count_area]=FWHM->GetBinCenter(FWHM->FindLastBinAbove(FWHM->GetMaximum()/2.))
+																		-FWHM->GetBinCenter(FWHM->FindFirstBinAbove(FWHM->GetMaximum()/2.));
 
 				GaussProfilY->Delete();
 				Gauss2ProfilY->Delete();
+				FWHM->Clear();
 				g2->Delete();
 
 				cArea->cd(2);
@@ -2919,13 +2936,21 @@ int main(int argc, char** argv)
 					Texte->DrawText(xt,yt,text_tmp);
 					yt-=ydecal;
 				}
+				yt-=ydecal;
+				text_tmp.Form("FWHM X : %3.3lf (%3.3lf mm)",vect_fwhm_x_area[count_area],vect_fwhm_x_area[count_area]*sizeStrip*10.);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
+				text_tmp.Form("FWHM Y : %3.3lf (%3.3lf mm)",vect_fwhm_y_area[count_area],vect_fwhm_y_area[count_area]*sizeStrip*10.);
+				Texte->DrawText(xt,yt,text_tmp);
+				yt-=ydecal;
 
 				name_area="Picture/Area_";
 				name_area+=(count_area+1);
 				name_area+=".png";
 				cArea->SaveAs(name_area);
 				
-				rootfile->Write();
+				FWHM->Delete();
+				// rootfile->Write();
 				TH2_Area->Delete();
 				Profil_x_area->Delete();
 				Profil_y_area->Delete();
@@ -3305,7 +3330,7 @@ int main(int argc, char** argv)
 	Profil_y->Draw();
 	cMap->SaveAs("Picture/Fluence_reconstruction.png");
 	
-	rootfile->Write();
+	// rootfile->Write();
 	TH2_Map->Delete();
 	TH2_Map_up->Delete();
 	// TH2_Map_tmp->Delete();
@@ -3397,7 +3422,7 @@ int main(int argc, char** argv)
 		TG_Rms_y->Write("RMS Y");
 		TG_Rms_y->Draw("ALP");
 
-		rootfile->Write();
+		// rootfile->Write();
 		cSamp->SaveAs("Picture/Sampling.png");
 		cSamp->Destructor();
 		TG_Mean_x->Delete();
@@ -3427,6 +3452,7 @@ int main(int argc, char** argv)
 	printf("Images générées\n");
 	faster_file_reader_close(reader);
 	free(filename);
+	rootfile->Write();
 	rootfile->Close();
 
 	// errrel.close();
