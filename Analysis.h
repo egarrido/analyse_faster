@@ -30,7 +30,7 @@
 #include "TVirtualFitter.h"
 
 #include <stdio.h>
-#include <string.h>
+#include <string>
 #include <stdlib.h>
 #include <math.h>
 #include <vector>
@@ -44,9 +44,9 @@
 
 #include "Seuil_data.h"
 #include "Calibrage_data.h"
-#include "Label_Arronax.h"
-// #include "Label_CPO.h"
-// #include "Label_Cyrce.h"
+// #include "Label_Arronax.h"	// 11-12
+// #include "Label_CPO.h"	// 1-2
+#include "Label_Cyrce.h"	// 4-6
 
 std::ofstream logfile;
 const bool logfileprint=true;
@@ -89,6 +89,7 @@ int bkgnd_param=0;
 int Gausstofit=1;
 int calibrage_used=0;
 int area_find_param=0;
+int lissage_param=0;
 int Strip_label;
 int Strip_number;
 int borne_m_x=16;
@@ -98,6 +99,7 @@ int borne_M_y=17;
 double bound_min=30.;
 double bound_max=60.;
 double bound_eoff=20.;
+double diviseur_param=1.;
 double energy;
 
 // const double SamplingTime=40e-6;  	// 40   us
@@ -109,7 +111,7 @@ double SamplingTime=1.;
 const double default_offset=0.419;		// 0.418   pC
 const double defaultRange_pC=24;    	// 24   pC
 const double sizeStrip=0.3; 					// 0.3 cm
-const	double ele2pC_coef=4.5777e-05; 
+const	double ele2pC_coef=4.5777e-05;
 double corrXY[N_STRIPS][2]={{1.00000,1.00000},
 														{1.00000,1.00000},
 														{1.00000,1.00000},
@@ -146,6 +148,8 @@ double corrXY[N_STRIPS][2]={{1.00000,1.00000},
 double debut_eoff;
 double fin_eoff;
 double offXY[N_STRIPS][2];
+double lissage_factor[N_STRIPS][2];
+double diviseur_factor[N_STRIPS][2];
 
 void set_plot_style()
 {

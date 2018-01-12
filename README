@@ -1,0 +1,100 @@
+*******************************************************************************************************************
+*                                                                                                                 *
+*                                      Programme d'analyse de données FASTER                                      *
+*                                                                                                                 *
+*******************************************************************************************************************
+
+Le dossier doit contenir les fichiers :
+		Analysis						- exécutable.
+		Analysis.C 					- fichier source.
+		Analysis.h 					- librairie.
+		Analysis.log 				- fichier log de la dernière éxecution du programme.
+		Calibrage_data.h 		- fichier de données des valeurs de calibrage.
+		Label_Arronax.h  		- fichier contenant les valeurs de label faster propres à Arronax.
+		Label_CPO.h 				- fichier contenant les valeurs de label faster propres au CPO.
+		Label_Cyrce.h 			- fichier contenant les valeurs de label faster propres à Cyrcé.
+		Makefile 						
+		Offset.txt 					- valeurs par défaut des offset électroniques.
+		Seuil_data.h 				- valeurs des seuils utilisées lors d'un recalcul des quanta issus d'un scaler.
+
+	Pour changer l'utilisation des label il faut modifier les lignes correspondantes dans la libraire Analysis.h
+
+Les sous-dossiers :
+		Entry/ 		- Contient les fichiers d'entrée de toutes les différentes configurations.
+		Ouput/		- Contient les fichiers de sortie qui sont stockés dans un dossier propre à chaque fichier faster.
+		Picture/	- Contient les images générées lors de la dernière exécution du programme.
+
+L'exécution du programme se fait en tapant la commande
+		./Analysis [arg]
+	
+	La valeur entière utilisée pour [arg] permet d'automatiquement renvoyer à un fichier d'entrée
+		Entry/Entry_param_[arg].txt
+	
+	Par défaut c'est la valeur 0 qui est utilisée.
+
+Le fichier de paramètres d'entrée se compose de la sorte
+
+		File: Nom du fichier à analyser.
+
+		Path for the file: Chemin vers le dossier contenant le fichier.
+
+		Background extraction (yes/no sub/function/default): Méthode d'extraction du bruit de fond.
+
+				yes 			- méthode standard qui prend le nombre de secondes défini par 
+				"Acquisition time for electronic offset" avant la première période d'irradiation, 
+				et après la dernière pour calculer l'offset moyen de chaque piste.
+		
+				no sub 		- pas de soustraction de bruit de fond.
+		
+				function	- méthode de calcul utilisant un ajustement trame par trame pour interpoler 
+				sur la zone présumée du signal, et définie pour X et Y par les valeurs 
+				"Exclusion strips X" et "Exclusion strips X".
+		
+				default		- utilisation de valeurs précalculées et stockées dans le fichiers Offset.txt.
+
+		Irradiation area finding way (charge/derivative/quanta/manual): Méthode de détermination des 
+		zones d'irradiations. 
+		
+				charge			- discrimination sur la charge totale qui détermine les débuts et fins 
+				d'irradiation lorsque celle-ci dépasse ou repasse sous la valeur seuil "Threshold".
+
+				derivative	- discrimination sur la dérivée de la charge avec la valeur seuil "Threshold".
+
+				quanta			- discrimination sur la valeur des quanta avec la valeur seuil "Threshold".
+				Méthode utile et efficace mais possible uniquement si des données de scaler sont présentes.
+
+				manual			- méthode manuelle pour définir la plage unique d'irradiation par l'intermédiaire
+				des valeurs "Boundaries" fournies en seconde.
+
+		Boundaries (s): Valeurs de début et fin de zone d'irradiation en seconde pour la discrimiation manuelle.
+
+		Threshold: Valeur de seuil utilisée par les méthodes "charge", "derivative" et "quanta".
+
+		Exclusion strips X: Valeurs de strips en X entre lesquelles l'ajustement interpole le zéro moyen.
+		Typiquement ce sont les strips sur lesquelles un signal est observé.
+
+		Exclusion strips Y: Pareil que "Exclusion strips X" mais pour Y
+
+		Calibrate particle: Paramètre de calibrage utilisé
+
+		Particle energy: Energie des particules incidente.
+				
+				-1 (ou valeur négative)	- spectre de plusieurs énergies.
+
+				0												- pas d'énergie précise.
+
+				valeur positive					- énergie des particules.
+
+		Time sampling (s): Pas en temps en seconde sur lequel est fait le calcul de l'évolution du centre et 
+		de la dispersion spatiale du faisceau.
+
+		Acquisition time for electronic offset (s): Intégrale de temps sur laquelle est fait le calcul des offset 
+		électroniques, cf "Background extraction".
+		
+		Integration steps: Nombre de trames intégrées pour la représentation de la charge totale.
+
+		Gaussian to fit: Nombre de fonctions gaussiennes utilisées pour l'ajustement du signal en X et Y, 
+		valeurs possibles 1 ou 2.
+
+L'ordre dans le fichier d'entrée n'a pas d'importance. Il n'est pas non plus obligatoire de mettre toutes les lignes,
+ dans le cas contraire, la valeur par défaut utilisée sera de 0.

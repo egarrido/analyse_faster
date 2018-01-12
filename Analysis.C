@@ -51,6 +51,10 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	12
 	Variable_init.push_back("Gaussian to fit"); // 13
 	Value_init.push_back(0.);	//	13
+	Variable_init.push_back("Smoothing"); // 14
+	Value_init.push_back(0.);	//	14
+	Variable_init.push_back("Charge divider"); // 15
+	Value_init.push_back(0.);	//	15
 
 	cout<<endl;
 	// ifstream datafile_param("./Entry/Entry_param_1.txt");
@@ -185,6 +189,22 @@ void EntryParameters(int config_simu)
 							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"; new value: "<<value<<endl;
 						Value_init[ind_value]=value;
 					}
+					if(ind_value==14)
+					{
+						if(!buffer.compare("no")||!buffer.compare("No"))
+							Value_init[ind_value]=0;
+						if(!buffer.compare("yes")||!buffer.compare("Yes"))
+							Value_init[ind_value]=1;
+					}
+					if(ind_value==15)
+					{
+						if(!buffer.compare("0")||!buffer.compare("1"))
+							Value_init[ind_value]=1;
+						if(!buffer.compare("100"))
+							Value_init[ind_value]=100;
+						if(!buffer.compare("10000")||!buffer.compare("10k"))
+							Value_init[ind_value]=10E3;
+					}
 				}	
 				else
 					cout<<"Value not define for "<<variable<<". Keeping the default one: "<<Value_init[ind_value]<<". Maybe check the entry file."<<endl;
@@ -211,14 +231,12 @@ void EntryParameters(int config_simu)
 		cout<<"Error with strips exclusion for X, "<<borne_m_x<<" - "<<borne_M_x<<" default values used"<<endl;
 		borne_m_x=16;
 		borne_M_x=17;
-		Value_init[5]=borne_M_x-borne_m_x-1;
 	}
 	if(borne_m_y>borne_M_y||borne_m_y<0||borne_m_y>32||borne_M_y<0||borne_M_y>32)
 	{
 		cout<<"Error with strips exclusion for Y, "<<borne_m_y<<" - "<<borne_M_y<<" default values used"<<endl;
 		borne_m_y=16;
 		borne_M_y=17;
-		Value_init[6]=borne_M_y-borne_m_y-1;
 	}
 
 	cout<<endl;
@@ -290,6 +308,24 @@ void EntryParameters(int config_simu)
 		cout<<" Irradiation manually defined ["<<bound_min<<" s;"<<bound_max<<" s]"<<endl;
 	area_find_param=Value_init[ivar];
 
+	ivar=14;
+	if(Value_init[ivar]==0)
+		cout<<" No smoothing applied"<<endl;
+	if(Value_init[ivar]==1)
+	{
+		lissage_param=1;
+		cout<<" Smoothing applied"<<endl;
+	}
+
+	ivar=15;
+	if(Value_init[ivar]==0||Value_init[ivar]==1||(Value_init[ivar]!=100&&Value_init[ivar]!=1E4))
+		cout<<" No charge divider used"<<endl;
+	else
+	{
+		diviseur_param=Value_init[ivar];
+		cout<<" Charge divided by "<<Value_init[ivar]<<endl;
+	}
+
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
 	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 	cout<<"=================================================="<<endl;
@@ -358,6 +394,18 @@ void EntryParameters(int config_simu)
 			logfile<<" Quanta method used with a threshold of "<<Value_init[9]<<endl;
 		if(Value_init[ivar]==3)
 			logfile<<" Irradiation manually defined ["<<bound_min<<" s;"<<bound_max<<" s]"<<endl;
+
+		ivar=14;
+		if(Value_init[ivar]==0)
+			logfile<<" No smoothing applied"<<endl;
+		if(Value_init[ivar]==1)
+			logfile<<" Smoothing applied"<<endl;
+
+		ivar=15;
+		if(Value_init[ivar]==1)
+			logfile<<" No charge divider used"<<endl;
+		else
+			logfile<<" Charge divided by "<<Value_init[ivar]<<endl;
 
 		// for(ivar=4;ivar<Variable_init.size();ivar++)
 		// 	logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -540,8 +588,8 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 	faster_file_reader_close(reader);
 	if(quanta>0)
 	{
-		TCanvas *cQuanta= new TCanvas("Quanta over time","",1000,500);
-		cQuanta->SetCanvasSize(1000,500);
+		TCanvas *cQuanta= new TCanvas("Quanta over time","",2000,1000);
+		cQuanta->SetCanvasSize(2000,1000);
 		cQuanta->Divide(1,2);
 
 		cQuanta->cd(1);
@@ -617,6 +665,37 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 	free(vect_dquanta);
 }
 
+void Lissage()
+{
+	ifstream lissage_file("Lissage_dosion_LPC.txt");
+	int tmp;
+	if(!lissage_file)
+	{
+		cout<<" No input file for smoothing parameters"<<endl;
+		return;
+	}
+	for(int i=0;i<N_STRIPS;i++)
+		lissage_file>>tmp>>lissage_factor[i][0]>>lissage_factor[i][1];
+	lissage_file.close();
+}
+
+void Diviseur()
+{
+	string filename;
+	if(diviseur_param==100.)
+		filename="Diviseur_100.txt";
+	ifstream diviseur_file(filename.c_str());
+	if(!diviseur_file)
+	{
+		cout<<" No input file for dividing device"<<endl;
+		return;
+	}
+	int tmp;
+	for(int i=0;i<N_STRIPS;i++)
+		diviseur_file>>tmp>>diviseur_factor[i][0]>>diviseur_factor[i][1];
+	diviseur_file.close();
+}
+
 void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[],double chargeTot_X,double chargeTot_Y)
 {
 	Vect_calib_factor.clear();
@@ -677,7 +756,7 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				name_qth2th="TH1_Qth2th_";
 				name_qth2th+=(current_area+1);
 				TCanvas *cQth2th= new TCanvas(name_qth2th);
-				cQth2th->SetCanvasSize(1000,800);
+				cQth2th->SetCanvasSize(2000,1600);
 				cQth2th->SetLogy();
 
 				hQth2th->SetTitle("Charge threshold to threshold");
@@ -1220,7 +1299,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TCanvas *cCharge= new TCanvas("Charge over time");
 	// cCharge->SetCanvasSize(1000,750);
 	// cCharge->Divide(1,3);
-	cCharge->SetCanvasSize(1000,1000);
+	cCharge->SetCanvasSize(2000,2000);
 	cCharge->Divide(1,4);
 
 	cCharge->cd(1);
@@ -1489,7 +1568,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	}
 
 	TCanvas *cCharge= new TCanvas("Charge over time");
-	cCharge->SetCanvasSize(1000,750);
+	cCharge->SetCanvasSize(2000,1500);
 	cCharge->Divide(1,3);
 
 	cCharge->cd(1);
@@ -1738,7 +1817,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	}
 
 	TCanvas *cCharge= new TCanvas("Charge over time");
-	cCharge->SetCanvasSize(1000,750);
+	cCharge->SetCanvasSize(2000,1500);
 	cCharge->Divide(1,3);
 
 	cCharge->cd(1);
@@ -1916,7 +1995,7 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	}
 
 	TCanvas *cCharge= new TCanvas("Charge over time");
-	cCharge->SetCanvasSize(1000,500);
+	cCharge->SetCanvasSize(2000,1000);
 	cCharge->Divide(1,2);
 
 	cCharge->cd(1);
@@ -2044,7 +2123,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		y_max=Profile->GetMaximum()*1.1;
 
 		TCanvas *cSFB = new TCanvas("Sub fitting background");
-		cSFB->SetCanvasSize(1000,500);
+		cSFB->SetCanvasSize(2000,1000);
 		cSFB->Divide(1,2);
 
 		cSFB->cd(1);
@@ -2140,7 +2219,7 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	for(int i=0;i<N_STRIPS;i++)
 		for(int j=0;j<N_STRIPS;j++)
 		{
-			Dose[i][j]=Fluence[i][j]*pC_to_Gy*1.6E-9;
+			Dose[i][j]=Fluence[i][j]*pC_to_Gy*q;
 			// TH2_Dose->SetBinContent(i+1,j+1,Fluence[i][j]/calib);
 			TH2_Dose->SetBinContent(i+1,j+1,Dose[i][j]);
 		}
@@ -2218,7 +2297,7 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	TString text_tmp;
 	Texte->SetTextAlign(31);
 	Texte->SetTextFont(43);
-	Texte->SetTextSize(15);
+	Texte->SetTextSize(30);
 	Texte->SetTextColor(1);
 	text_tmp.Form("Irradiation %d",nb_area+1);
 	Texte->DrawText(xt,yt,text_tmp);
@@ -2418,6 +2497,10 @@ int main(int argc, char** argv)
 	{
 		ProfilX[j]=0;
 		ProfilY[j]=0;
+		lissage_factor[j][0]=1.;
+		lissage_factor[j][1]=1.;
+		diviseur_factor[j][0]=diviseur_param;
+		diviseur_factor[j][1]=diviseur_param;
 	}
 	ChX->Reset();
 	ChY->Reset();
@@ -2425,6 +2508,11 @@ int main(int argc, char** argv)
 	SamplY->Reset();
 	AreaX->Reset();
 	AreaY->Reset();
+
+	if(diviseur_param!=1.)
+		Diviseur();
+	if(lissage_param==1)
+		Lissage();
 
 	if(area_find_param==0)
 		DerivativeSignalArea(filename,&tot_area,signal_time);
@@ -2508,6 +2596,7 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
+							val=val*lissage_factor[j][0]*diviseur_factor[j][0];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
 							PreSFB[j]=val;
@@ -2517,6 +2606,7 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
+							val=val*lissage_factor[j][1]*diviseur_factor[j][1];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
 							PreSFB[j]=val;
@@ -2568,8 +2658,9 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
+							val=val*lissage_factor[j][0]*diviseur_factor[j][0];
 							if(in_area==0)
-							// if(in_area==0&&(j>=borne_m_x&&j<=borne_M_x)) // taille du plastique
+							// if(in_area==0&&(j>=borne_m_x&&j<borne_M_x)) // taille du plastique
 								chargeTot_signal_X+=val;
 							// if(val<EOffX[j]*factor_eoff)
 							// 	val=0.; 
@@ -2579,8 +2670,9 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
+							val=val*lissage_factor[j][1]*diviseur_factor[j][1];
 							if(in_area==0)
-							// if(in_area==0&&(j>=borne_m_y&&j<=borne_M_y)) // taille du plastique
+							// if(in_area==0&&(j>=borne_m_y&&j<borne_M_y)) // taille du plastique
 								chargeTot_signal_Y+=val;
 							// if(val<EOffY[j]*factor_eoff)
 							// 	val=0.; 
@@ -2670,6 +2762,9 @@ int main(int argc, char** argv)
 
 			if(in_area==1&&tot_area>0)
 			{
+				// for(int jj=0;jj<N_STRIPS;jj++)
+				// 	cout<<jj+1<<" "<<AreaX->GetAt(jj)<<" "<<AreaY->GetAt(jj)<<endl;
+
 				name_area="TH2_Area_";
 				name_area+=(count_area+1);
 				TH2F* TH2_Area=new TH2F(name_area,"Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
@@ -2749,7 +2844,7 @@ int main(int argc, char** argv)
 				vect_ampl_area[count_area]=TH2_Area->GetBinContent(TH2_Area->GetMaximumBin());
 
 				TCanvas *cArea= new TCanvas("Dose map");
-				cArea->SetCanvasSize(1000,1000);
+				cArea->SetCanvasSize(2000,2000);
 				cArea->Divide(2,2);
 
 				cArea->cd(1);
@@ -2888,7 +2983,7 @@ int main(int argc, char** argv)
 				yt=.9;
 				Texte->SetTextAlign(31);
 				Texte->SetTextFont(43);
-				Texte->SetTextSize(15);
+				Texte->SetTextSize(30);
 				Texte->SetTextColor(1);
 				text_tmp.Form("Irradiation %d",count_area+1);
 				Texte->DrawText(xt,yt,text_tmp);
@@ -2949,8 +3044,8 @@ int main(int argc, char** argv)
 				name_area+=".png";
 				cArea->SaveAs(name_area);
 				
-				FWHM->Delete();
 				// rootfile->Write();
+				FWHM->Delete();
 				TH2_Area->Delete();
 				Profil_x_area->Delete();
 				Profil_y_area->Delete();
@@ -3085,7 +3180,7 @@ int main(int argc, char** argv)
 	arrow->SetLineWidth(3.);
 	if(tot_area>0)
 	{
-		if(bkgnd_param==1&&bkgnd_param==3)
+		if(bkgnd_param==1||bkgnd_param==3)
 		{
 			TBox *box= new TBox();
 			box->SetFillStyle(0);
@@ -3195,7 +3290,7 @@ int main(int argc, char** argv)
 		DoseDistribution(0,Map);
 
 	TCanvas *cMap= new TCanvas("Dose map");
-	cMap->SetCanvasSize(1000,1000);
+	cMap->SetCanvasSize(2000,2000);
 	cMap->Divide(2,2);
 
 	cMap->cd(1);
@@ -3343,7 +3438,7 @@ int main(int argc, char** argv)
 	if(nbSummedSample>0)
 	{
 		TCanvas *cSamp= new TCanvas("Sampling dose");
-		cSamp->SetCanvasSize(1000,1000);
+		cSamp->SetCanvasSize(2000,2000);
 		cSamp->Divide(1,4);
 
 		cSamp->cd(1);

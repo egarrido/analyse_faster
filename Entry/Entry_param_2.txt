@@ -1,7 +1,7 @@
-File: Acq_1_53cm_1nA_0001.fast
+File: Acq_1_trav_1nA_0001.fast
 Path for the file: /home/garrido/Dosion/Arronax/06_2017/
-Background extraction (yes/no sub/function/default): default
-Irradiation area finding way (charge/derivative/quanta/manual): manual
+Background extraction (yes/no sub/function/default): yes
+Irradiation area finding way (charge/derivative/quanta/manual): charge
 Boundaries (s): 40. 60.
 Threshold: 40400.
 Exclusion strips X: 11 21
