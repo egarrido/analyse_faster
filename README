@@ -96,5 +96,9 @@ Le fichier de paramètres d'entrée se compose de la sorte
 		Gaussian to fit: Nombre de fonctions gaussiennes utilisées pour l'ajustement du signal en X et Y, 
 		valeurs possibles 1 ou 2.
 
+		Smoothing: Utilise des valeurs pré-calculées pour chaque Dosion afin de lisser la réponse des pistes.
+
+		Charge divider: Permet de recalculer les charges en tenant du compte du diviseur si utilisé.
+
 L'ordre dans le fichier d'entrée n'a pas d'importance. Il n'est pas non plus obligatoire de mettre toutes les lignes,
  dans le cas contraire, la valeur par défaut utilisée sera de 0.
