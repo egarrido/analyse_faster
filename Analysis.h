@@ -45,8 +45,8 @@
 #include "Seuil_data.h"
 #include "Calibrage_data.h"
 // #include "Label_Arronax.h"	// 11-12
-// #include "Label_CPO.h"	// 1-2
-#include "Label_Cyrce.h"	// 4-6
+#include "Label_CPO.h"	// 1-2
+// #include "Label_Cyrce.h"	// 4-6
 
 std::ofstream logfile;
 const bool logfileprint=true;

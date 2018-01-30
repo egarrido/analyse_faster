@@ -1,13 +1,13 @@
-File: ajustement_0001.fast
-Path for the file: /home/garrido/Dosion/Diviseur/DATA/
-Background extraction (yes/no sub/function/default): default
-Irradiation area finding way (charge/derivative/quanta/manual): manual
+File: diviseur_4_0001.fast
+Path for the file: /home/garrido/Dosion/CPO/01_2018/
+Background extraction (yes/no sub/function/default): yes
+Irradiation area finding way (charge/derivative/quanta/manual): derivative
 Boundaries (s): 21. 125.
 Threshold: 500.
 Exclusion strips X: 19 20
 Exclusion strips Y: 19 20 
-Calibrate particle: proton_Arronax_68_MeV
-Particle energy: 0.
+Calibrate particle: nothing
+Particle energy: -1.
 Time sampling (s): 10000.
 Acquisition time for electronic offset (s): 20.
 Integration steps: 50

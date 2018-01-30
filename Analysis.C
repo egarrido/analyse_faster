@@ -40,7 +40,7 @@ void EntryParameters(int config_simu)
 	Variable_init.push_back("Irradiation area finding way (charge/derivative/quanta/manual)"); // 7
 	Value_init.push_back(0.);	//	7
 	Variable_init.push_back("Particle energy"); // 8
-	Value_init.push_back(0.);	//	8
+	Value_init.push_back(20.);	//	8
 	Variable_init.push_back("Threshold"); // 9
 	Value_init.push_back(0.);	//	9
 	Variable_init.push_back("Integration steps"); // 10
@@ -48,7 +48,7 @@ void EntryParameters(int config_simu)
 	Variable_init.push_back("Boundaries (s)"); // 11
 	Value_init.push_back(0.);	//	11
 	Variable_init.push_back("Acquisition time for electronic offset (s)"); // 12
-	Value_init.push_back(0.);	//	12
+	Value_init.push_back(20.);	//	12
 	Variable_init.push_back("Gaussian to fit"); // 13
 	Value_init.push_back(0.);	//	13
 	Variable_init.push_back("Smoothing"); // 14
@@ -128,10 +128,15 @@ void EntryParameters(int config_simu)
 					{
 						value=(double)atof(buffer.c_str());
 						if(value==0.)
-							cout<<" Multiple energies for primary particles"<<endl;
-						else	
-							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"; new value: "<<value<<endl;
-						Value_init[ind_value]=value;
+							cout<<"No input data for primary particles energy, default value: "<<Variable_init[ind_value]<<" MeV; used"<<endl;
+						else
+						{
+							if(value==-1.)
+								cout<<"Multiple energies for primary particles"<<endl;
+							if(value>0.)	
+								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"MeV; new value: "<<value<<" MeV"<<endl;
+							Value_init[ind_value]=value;
+						}
 					}
 					if(ind_value==4||ind_value==10)
 					{
@@ -517,6 +522,8 @@ double Calib_value(int area,int in_area,double e_part)
 	if(calibrage_used==3)
 		return 0.028431749; //68 MeV p+ Arronax
 
+	return Loss_value(energy,1.2e-3)/W_air*q*1.E15;
+
 	return 0.;
 	// return .01875; //120 MeV
 	// return .01532; //160 MeV
@@ -696,7 +703,7 @@ void Diviseur()
 	diviseur_file.close();
 }
 
-void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[],double chargeTot_X,double chargeTot_Y)
+void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[],double vect_charge_x[],double vect_charge_y[])
 {
 	Vect_calib_factor.clear();
 	Vect_calib_charge.clear();
@@ -792,8 +799,8 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				cout<<"Calibrage issu du scaler"<<endl;
 				if(tot_area==1)
 				{
-					cout<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_X/quanta*1000.<<"(fC/part.)"<<endl;
-					cout<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_Y/quanta*1000.<<"(fC/part.)"<<endl;
+					cout<<"Calib.  X : "<<vect_charge_x[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_x[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
+					cout<<"Calib.  Y : "<<vect_charge_y[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_y[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
 				}
 				cout<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 				if(logfileprint==true)
@@ -801,8 +808,8 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 					logfile<<"Calibrage issu du scaler"<<endl;
 					if(tot_area==1)
 					{
-						logfile<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_X/quanta*1000.<<"(fC/part.)"<<endl;
-						logfile<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<chargeTot_Y/quanta*1000.<<"(fC/part.)"<<endl;
+						logfile<<"Calib.  X : "<<vect_charge_x[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_x[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
+						logfile<<"Calib.  Y : "<<vect_charge_y[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_y[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
 					}
 					logfile<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
 				}
@@ -1030,6 +1037,39 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	eoff_file.close();
 }
 
+void DerivativeCharge(int count,double h,double vect_charge_in[],double vect_dcharge_out[])
+{
+	double yl1,yl2,yr1,yr2;
+	for(int i=2;i<count-1;i++)
+	{
+		if(i<2)
+		{	
+			yl2=0.;
+			yl1=0.;
+			if(i>=1)
+				yl1=vect_charge_in[i-1];
+		}
+		else
+		{
+			yl2=vect_charge_in[i-2];
+			yl1=vect_charge_in[i-1];
+		}
+		if(i>count-2)
+		{	
+			yr2=0.;
+			yr1=0.;
+			if(i<=count-1)
+				yr1=vect_charge_in[i+1];
+		}
+		else
+		{
+			yr2=vect_charge_in[i+2];
+			yr1=vect_charge_in[i+1];
+		}
+		vect_dcharge_out[i]=(8.*(yr1-yl1)-yr2+yl2)/(12.*h);
+	}
+}
+
 void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 {
 	faster_file_reader_p reader;
@@ -1136,34 +1176,9 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	h=vect_time_int[1]-vect_time_int[0];
 	nb_1sec=1+(int)1./h;
 	nb_1sec=2;
-	for(int i=2;i<count_int-1;i++)
-	{
-		if(i<2)
-		{	
-			yl2=0.;
-			yl1=0.;
-			if(i>=1)
-				yl1=vect_charge_int[i-1];
-		}
-		else
-		{
-			yl2=vect_charge_int[i-2];
-			yl1=vect_charge_int[i-1];
-		}
-		if(i>count_int-2)
-		{	
-			yr2=0.;
-			yr1=0.;
-			if(i<=count_int-1)
-				yr1=vect_charge_int[i+1];
-		}
-		else
-		{
-			yr2=vect_charge_int[i+2];
-			yr1=vect_charge_int[i+1];
-		}
-		vect_dcharge_int[i]=(8.*(yr1-yl1)-yr2+yl2)/(12.*h);
-	}
+
+	DerivativeCharge(count_int,h,vect_charge_int,vect_dcharge_int);
+
 	for(int i=2;i<count_int-1;i++)
 	{
 		if(i<2)
@@ -1190,16 +1205,17 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 			dyr2=vect_dcharge_int[i+2];
 			dyr1=vect_dcharge_int[i+1];
 		}
+
 		if(i%5==2)
 		{
 			dcharge_moy=Extremum(dyl1,dyl2,dyr1,dyr2,vect_dcharge_int[i]);
-
-			if(i>=nb_1sec)
-				yl2=vect_charge_int[i-nb_1sec];
+			// +/-3 pour choisir les valeurs en dehors des 5 testées
+			if(i>=3)
+				yl2=vect_charge_int[i-3];
 			else
 				yl2=0.;
-			if(i<count_int-nb_1sec)
-				yr2=vect_charge_int[i+nb_1sec];
+			if(i<count_int-3)
+				yr2=vect_charge_int[i+3];
 			else
 				yr2=0.;
 			test_signal=(yl2-yr2)/TMath::Max(yl2,yr2);
@@ -1261,7 +1277,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 				{
 					beg_on=1;
 					cout<<"Attention, le fichier débute sur du signal On"<<endl;
-					last_signal=vect_time_int[i];
+					first_signal=vect_time_int[0];
 					signal_time[*tot_area][0]=vect_time_int[0];
 					if(i<count_int-nb_1sec)
 						signal_time[*tot_area][1]=vect_time_int[i+nb_1sec];
@@ -1283,7 +1299,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	{
 		end_on=1;
 		cout<<"Attention, le fichier se termine sur du signal On"<<endl;
-		signal_time[*tot_area][1]=vect_time_int[count_int-1];
+		signal_time[*tot_area][1]=vect_time_int[count_int-nb_1sec]-1.;
 		*tot_area=*tot_area+1;
 		last_signal=-1.;
 	}
@@ -1493,33 +1509,11 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	h=vect_time_int[1]-vect_time_int[0];
 	nb_1sec=1+(int)1./h;
 	nb_1sec=2;
+	
+	DerivativeCharge(count_int,h,vect_charge_int,vect_dcharge_int);
+	
 	for(int i=2;i<count_int-1;i++)
 	{
-		if(i<2)
-		{	
-			yl2=0.;
-			yl1=0.;
-			if(i>=1)
-				yl1=vect_charge_int[i-1];
-		}
-		else
-		{
-			yl2=vect_charge_int[i-2];
-			yl1=vect_charge_int[i-1];
-		}
-		if(i>count_int-2)
-		{	
-			yr2=0.;
-			yr1=0.;
-			if(i<=count_int-1)
-				yr1=vect_charge_int[i+1];
-		}
-		else
-		{
-			yr2=vect_charge_int[i+2];
-			yr1=vect_charge_int[i+1];
-		}
-		vect_dcharge_int[i]=(8.*(yr1-yl1)-yr2+yl2)/(12.*h);
 
 		if(vect_charge_int[i]>seuilC&&mvt==asc)
 		{
@@ -1553,7 +1547,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	if(mvt==des)
 	{
 		cout<<"Attention, le fichier se termine sur du signal On"<<endl;
-		signal_time[*tot_area][1]=vect_time_int[count_int-1];
+		signal_time[*tot_area][1]=vect_time_int[count_int-nb_1sec]-1.;
 		*tot_area=*tot_area+1;
 		last_signal=-1.;
 		end_on=1;
@@ -1671,6 +1665,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double first_signal;
 	double last_signal;
 	double charge;
+	double h;
 	double chargeTot_pC=0.;
 	double charge_X=0.;
 	double charge_X_int=0.;
@@ -1684,6 +1679,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	double* vect_dquanta=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_time_int=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_int=(double*)malloc(MAX_INTEGR*sizeof(double));
+	double* vect_dcharge_int=(double*)malloc(MAX_INTEGR*sizeof(double));
 
 	t0=-1;
 	while((data=faster_file_reader_next(reader))!=NULL) 
@@ -1756,6 +1752,9 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	count_tot--;
 	faster_file_reader_close(reader);
 
+	h=vect_time_int[1]-vect_time_int[0];
+	DerivativeCharge(count_int,h,vect_charge_int,vect_dcharge_int);
+
 	if(count_quanta<1)
 	{
 		cout<<"Pas de données de quanta"<<endl;
@@ -1802,7 +1801,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	if(mvt==des)
 	{
 		cout<<"Attention, le fichier se termine sur du signal On"<<endl;
-		signal_time[*tot_area][1]=vect_time_int[count_quanta-1];
+		signal_time[*tot_area][1]=vect_time_q[count_quanta-nb_1sec]-1.;
 		*tot_area=*tot_area+1;
 		last_signal=-1.;
 		end_on=1;
@@ -1817,8 +1816,8 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	}
 
 	TCanvas *cCharge= new TCanvas("Charge over time");
-	cCharge->SetCanvasSize(2000,1500);
-	cCharge->Divide(1,3);
+	cCharge->SetCanvasSize(2000,2000);
+	cCharge->Divide(1,4);
 
 	cCharge->cd(1);
 	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
@@ -1857,6 +1856,24 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->Draw("AL");
 
 	cCharge->cd(3);
+	TGraph *TG_dCharge=new TGraph(count_int,vect_time_int,vect_dcharge_int);
+	TG_dCharge->SetMarkerColor(4);
+	TG_dCharge->SetLineColor(4);
+	TG_dCharge->SetLineWidth(1.5);
+	TG_dCharge->SetTitle("Charge derivative over time");
+	TG_dCharge->GetXaxis()->SetTitle("Time (s)");
+	TG_dCharge->GetXaxis()->SetTickSize(0.01);
+	TG_dCharge->GetXaxis()->SetTitleSize(0.06);
+	TG_dCharge->GetXaxis()->SetLabelSize(0.05);
+	TG_dCharge->GetYaxis()->SetTitle("Derivative");
+	TG_dCharge->GetYaxis()->SetTickSize(0.01);
+	TG_dCharge->GetYaxis()->SetTitleSize(0.06);
+	TG_dCharge->GetYaxis()->CenterTitle();
+	TG_dCharge->GetYaxis()->SetLabelSize(0.05);
+	TG_dCharge->Write("DCharge");
+	TG_dCharge->Draw("AL");
+
+	cCharge->cd(4);
 	TGraph *TG_dQuanta=new TGraph(count_quanta,vect_time_q,vect_dquanta);
 	TG_dQuanta->SetMarkerColor(4);
 	TG_dQuanta->SetLineColor(4);
@@ -1884,6 +1901,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 
 	TG_Charge->Delete();
 	TG_Charge_int->Delete();
+	TG_dCharge->Delete();
 	TG_dQuanta->Delete();
 	cCharge->Destructor();
 	free(vect_time);
@@ -1891,6 +1909,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_charge);
 	free(vect_time_int);
 	free(vect_charge_int);
+	free(vect_dcharge_int);
 	free(vect_dquanta);
 }
 
@@ -2209,7 +2228,19 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	double rms_dose=0.;
 	double calib=Calib_value(0,0,energy)*pow(strip_width,2)/1000.;
 	double TEL=TEL_value(1,energy);
-	double pC_to_Gy=TEL/calib;
+	double pC_to_Gy=TEL/calib*q*1.E10;
+
+	// ***********************************************
+	// TEL=keV.um-1=1000.eV.1E-6.m-1=1E9.eV.m-1
+	// Calib_value=fC.part-1(integrale)=fC
+	// calib=1E3.fC.cm2=1E-4.pC.m2
+	// kg=dm3(eau)=1E-3.m3
+	// J=q.eV
+	// Gy=J.kg-1=1E3.q.eV.m-3 <=> eV.m-3=1E-3.Gy.q
+	// pC_to_Gy=1E13.eV.pC-1.m-1.m-2=1E13.eV.pC-1.m-3
+	// pC_to_Gy=1E13.[eV.m-3].pC-1. <=> 1E10.q.Gy.pC-1
+	// ***********************************************
+
 	double Dose[N_STRIPS][N_STRIPS];
 	// cout<<TEL<<" "<<calib<<endl;
 
@@ -2219,7 +2250,7 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	for(int i=0;i<N_STRIPS;i++)
 		for(int j=0;j<N_STRIPS;j++)
 		{
-			Dose[i][j]=Fluence[i][j]*pC_to_Gy*q;
+			Dose[i][j]=Fluence[i][j]*pC_to_Gy;
 			// TH2_Dose->SetBinContent(i+1,j+1,Fluence[i][j]/calib);
 			TH2_Dose->SetBinContent(i+1,j+1,Dose[i][j]);
 		}
@@ -2246,7 +2277,7 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	rms_dose=sqrt(rms_dose/count_dose-(mean_dose*mean_dose));
 	
 	TCanvas *cDose= new TCanvas("Dose distribution");
-	cDose->SetCanvasSize(1500,500);
+	cDose->SetCanvasSize(2100,700);
 	cDose->Divide(3,1);
 
 	cDose->cd(1);
@@ -2292,7 +2323,7 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	cDose->cd(3);
 	double xt=.9;
 	double yt=.9;
-	double ydecal=.04;
+	double ydecal=.05;
 	TText* Texte=new TText();
 	TString text_tmp;
 	Texte->SetTextAlign(31);
@@ -2414,6 +2445,7 @@ int main(int argc, char** argv)
 	double min;
 	double max;
 	double calib_factor;
+	double calib_th;
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
@@ -2762,9 +2794,16 @@ int main(int argc, char** argv)
 
 			if(in_area==1&&tot_area>0)
 			{
+				// cout<<"------------------------"<<endl;
+				// cout<<"Piste et charges totales"<<endl;
+				// // double duration=(signal_time[count_area][1]-signal_time[count_area][0]);
+				// double duration=1.; // CPO fourni une même quantité en intégrale et pas instantanée 
 				// for(int jj=0;jj<N_STRIPS;jj++)
-				// 	cout<<jj+1<<" "<<AreaX->GetAt(jj)<<" "<<AreaY->GetAt(jj)<<endl;
+				// 	cout<<jj+1<<" "<<AreaX->GetAt(jj)/duration<<" "<<AreaY->GetAt(jj)/duration<<endl;
+				// cout<<"------------------------"<<endl;
 
+				delete gROOT->FindObject("FWHM");	// Pourquoi ? Parce que Root
+				
 				name_area="TH2_Area_";
 				name_area+=(count_area+1);
 				TH2F* TH2_Area=new TH2F(name_area,"Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
@@ -2975,7 +3014,7 @@ int main(int argc, char** argv)
 
 				GaussProfilY->Delete();
 				Gauss2ProfilY->Delete();
-				FWHM->Clear();
+				FWHM->Delete();
 				g2->Delete();
 
 				cArea->cd(2);
@@ -3045,10 +3084,10 @@ int main(int argc, char** argv)
 				cArea->SaveAs(name_area);
 				
 				// rootfile->Write();
-				FWHM->Delete();
 				TH2_Area->Delete();
 				Profil_x_area->Delete();
 				Profil_y_area->Delete();
+				// FWHM->Delete();
 				cArea->Destructor();
 
 				AreaX->Reset();
@@ -3532,9 +3571,19 @@ int main(int argc, char** argv)
 		cout<<"Pas de données de calibrage"<<endl;
 
 	if(data_meas==1&&tot_area>0)
-		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area,chargeTot_signal_X,chargeTot_signal_Y);
+		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area,vect_charge_x_area,vect_charge_y_area);
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
+
+	if(energy>0.)
+	{
+		calib_th=Loss_value(energy,1.2e-3)/W_air*q*1.E15;
+		cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_th<<" fC/part."<<endl;
+		if(logfileprint==true)
+			logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_th<<" fC/part."<<endl;
+	}
+
+
 
 	// if(Vect_calib_factor.size()>0)
 	// {

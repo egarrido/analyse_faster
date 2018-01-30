@@ -44,8 +44,14 @@ const int MAX_QNT=7;
 // 																	{150,1700,2870,5250,20000,20000,20000},
 // 																	{60,20000,20000,20000,20000,20000,20000}};
 
-// //CPO
-// double Seuil_quanta[1][MAX_QNT]={{50,480,710,20000,20000,20000,20000}};
+//CPO
+// double Seuil_quanta[1][MAX_QNT]={{20,20000,20000,20000,20000,20000,20000}};	// Defaut
+// double Seuil_quanta[1][MAX_QNT]={{20,200,350,600,20000,20000,20000}};	// 0mm 1200V
+// double Seuil_quanta[1][MAX_QNT]={{20,250,450,700,20000,20000,20000}};	// 95.75mm 1200V
+// double Seuil_quanta[1][MAX_QNT]={{50,300,600,900,20000,20000,20000}};	// 160mm 1200V
+// double Seuil_quanta[1][MAX_QNT]={{20,350,550,800,20000,20000,20000}};	// 176mm 1200V
+double Seuil_quanta[1][MAX_QNT]={{50,450,750,20000,20000,20000,20000}};	// 0mm 1300V
+// double Seuil_quanta[1][MAX_QNT]={{50,650,1200,20000,20000,20000,20000}};	// 160mm 1300V
 
-//Arronax
-double Seuil_quanta[1][MAX_QNT]={{50,420,700,20000,20000,20000,20000}};
+// //Arronax
+// double Seuil_quanta[1][MAX_QNT]={{50,420,700,20000,20000,20000,20000}};
