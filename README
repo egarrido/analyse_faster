@@ -73,9 +73,9 @@ Le fichier de paramètres d'entrée se compose de la sorte
 		Exclusion strips X: Valeurs de strips en X entre lesquelles l'ajustement interpole le zéro moyen.
 		Typiquement ce sont les strips sur lesquelles un signal est observé.
 
-		Exclusion strips Y: Pareil que "Exclusion strips X" mais pour Y
+		Exclusion strips Y: Pareil que "Exclusion strips X" mais pour Y.
 
-		Calibrate particle: Paramètre de calibrage utilisé
+		Calibrate data: Paramètre de calibrage utilisé, peut-être des données, une valeur, ou rien.
 
 		Particle energy: Energie des particules incidente.
 				
