@@ -6,7 +6,7 @@ Boundaries (s): 21. 125.
 Threshold: 50.
 Exclusion strips X: 19 20
 Exclusion strips Y: 19 20 
-Calibrate particle: proton_Arronax_68_MeV
+Calibrate data: proton_Arronax_68_MeV
 Particle energy: 100.
 Time sampling (s): 10000.
 Acquisition time for electronic offset (s): 20.

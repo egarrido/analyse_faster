@@ -2,6 +2,13 @@
 
 using namespace std;
 
+bool CheckDouble(std::string const& s) 
+{
+  std::istringstream ss(s);
+  double d;
+  return (ss>>d)&&(ss>>std::ws).eof();
+}
+
 void EntryParameters(int config_simu)
 {
 	stringstream ss;
@@ -18,6 +25,7 @@ void EntryParameters(int config_simu)
 	string data_file;
 	string path_file;
 	string filename="./Entry/Entry_param_"+indice+".txt";
+	string pathname="./Entry/Entry_path.txt";
 	// string filename="./Entry/Entry_param_1.txt";
 	string tmp;
 
@@ -29,7 +37,7 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	1
 	Variable_init.push_back("Background extraction (yes/no sub/function/default)"); // 2
 	Value_init.push_back(0.);	//	2
-	Variable_init.push_back("Calibrate particle"); // 3
+	Variable_init.push_back("Calibrate data"); // 3
 	Value_init.push_back(0.);	//	3
 	Variable_init.push_back("Time sampling (s)"); // 4
 	Value_init.push_back(0.);	//	4
@@ -57,8 +65,20 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	15
 
 	cout<<endl;
-	// ifstream datafile_param("./Entry/Entry_param_1.txt");
+	ifstream pathfile_param(pathname.c_str());
+	if(!pathfile_param)
+	{
+		cout<<"No entry file for the data path"<<endl;
+		cout<<"No file: "<<pathname<<endl;
+		exit(0);
+	}
+	else
+	{
+		getline(pathfile_param,path_file);
+	}
+
 	ifstream datafile_param(filename.c_str());
+	// ifstream datafile_param("./Entry/Entry_param_1.txt");
 	if(!datafile_param)
 	{
 		cout<<"No entry parameters file for this configuration: "<<config_simu<<endl;
@@ -103,7 +123,7 @@ void EntryParameters(int config_simu)
 					if(ind_value==0)
 						data_file=buffer;
 					if(ind_value==1)
-						path_file=buffer;
+						path_file+=buffer;
 					if(ind_value==2)
 					{
 						if(!buffer.compare("default"))
@@ -117,12 +137,22 @@ void EntryParameters(int config_simu)
 					}
 					if(ind_value==3)
 					{
-						if(!buffer.compare("proton_Cyrce"))
-							Value_init[ind_value]=1;
-						if(!buffer.compare("proton_Arronax"))
-							Value_init[ind_value]=2;
-						if(!buffer.compare("proton_Arronax_68_MeV"))
-							Value_init[ind_value]=3;
+						if(CheckDouble(buffer)==1)
+						{
+							Value_init[ind_value]=0;
+							calib_entry=(double)atof(buffer.c_str());
+						}
+						else
+						{
+							if(!buffer.compare("nothing"))
+								Value_init[ind_value]=-1;
+							if(!buffer.compare("proton_Cyrce"))
+								Value_init[ind_value]=1;
+							if(!buffer.compare("proton_Arronax"))
+								Value_init[ind_value]=2;
+							if(!buffer.compare("proton_Arronax_68_MeV"))
+								Value_init[ind_value]=3;
+						}
 					}
 					if(ind_value==8)
 					{
@@ -131,7 +161,7 @@ void EntryParameters(int config_simu)
 							cout<<"No input data for primary particles energy, default value: "<<Variable_init[ind_value]<<" MeV; used"<<endl;
 						else
 						{
-							if(value==-1.)
+							if(value<0.)
 								cout<<"Multiple energies for primary particles"<<endl;
 							if(value>0.)	
 								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"MeV; new value: "<<value<<" MeV"<<endl;
@@ -267,6 +297,8 @@ void EntryParameters(int config_simu)
 	
 	ivar=3;
 	if(Value_init[ivar]==0)
+		cout<<" Calibration value: "<<calib_entry<<" fC/part"<<endl;
+	if(Value_init[ivar]==-1)
 		cout<<" No calibration value"<<endl;
 	if(Value_init[ivar]==1)
 		cout<<" Cyrce calibration values used"<<endl;
@@ -278,7 +310,10 @@ void EntryParameters(int config_simu)
 
 	ivar=8;
 	if(Value_init[ivar]<0.)
+	{
 		cout<<" Multiple energies for primary particles"<<endl;
+		dosedistribution=false;
+	}	
 	if(Value_init[ivar]==0.)
 	{
 		cout<<" No energy for the primary particles"<<endl;
@@ -362,6 +397,8 @@ void EntryParameters(int config_simu)
 		
 		ivar=3;
 		if(Value_init[ivar]==0)
+			logfile<<" Calibration value: "<<calib_entry<<" fC/part"<<endl;
+		if(Value_init[ivar]==-1)
 			logfile<<" No calibration value"<<endl;
 		if(Value_init[ivar]==1)
 			logfile<<" Cyrce calibration values used"<<endl;
@@ -484,7 +521,7 @@ double Loss_value(double e_part,double density)
 	double dEdX=0.;
 	double e_loss=0.;
 
-	double gap=3.*2.;
+	double gap=gap_Dosion*2.;
 	double e_part_loss=e_part;
 
 	double length_left=gap*1000.;
@@ -519,10 +556,14 @@ double Calib_value(int area,int in_area,double e_part)
 	if(in_area!=0)
 		return 0.;
 
+	if(calibrage_used==0)
+		return calib_entry; 
+
+	if(calibrage_used==-1)
+		return Loss_value(energy,1.2e-3)/W_air*q*1.E15;
+
 	if(calibrage_used==3)
 		return 0.028431749; //68 MeV p+ Arronax
-
-	return Loss_value(energy,1.2e-3)/W_air*q*1.E15;
 
 	return 0.;
 	// return .01875; //120 MeV
@@ -2509,7 +2550,7 @@ int main(int argc, char** argv)
 	EntryParameters(config_simu);
 	strcpy(filename,data_faster_file.c_str());
 	integration=IntegrationStep;
-	
+
 	char command_line[80];
 	sprintf(command_line,"faster_disfast %s -I",filename);
 	system(command_line);
@@ -3325,7 +3366,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if(dosedistribution)
+	if(dosedistribution||calibrage_used!=-1.)
 		DoseDistribution(0,Map);
 
 	TCanvas *cMap= new TCanvas("Dose map");

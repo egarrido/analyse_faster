@@ -83,6 +83,7 @@ const int MAX_PEAK=10;
 const int MAX_SMPL=1000;
 const int MAX_INTEGR=1000000;
 const double strip_width=.3; //cm
+const double gap_Dosion=3.; //mm
 
 bool dosedistribution=true;
 int bkgnd_param=0;
@@ -100,7 +101,8 @@ double bound_min=30.;
 double bound_max=60.;
 double bound_eoff=20.;
 double diviseur_param=1.;
-double energy;
+double energy=0.;
+double calib_entry=0.;
 
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;
