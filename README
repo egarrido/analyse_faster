@@ -98,7 +98,7 @@ Le fichier de paramètres d'entrée se compose de la sorte
 
 		Smoothing: Utilise des valeurs pré-calculées pour chaque Dosion afin de lisser la réponse des pistes.
 
-		Charge divider: Permet de recalculer les charges en tenant du compte, si utilisé, du diviseur.
+		Chamber value (Gy): La valeur donnée par une éventuelle chambre placée sous le faisceau.
 
 L'ordre dans le fichier d'entrée n'a pas d'importance. Il n'est pas non plus obligatoire de mettre toutes les lignes,
  dans le cas contraire, la valeur par défaut utilisée sera de 0.

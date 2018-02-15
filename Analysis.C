@@ -48,7 +48,7 @@ void EntryParameters(int config_simu)
 	Variable_init.push_back("Irradiation area finding way (charge/derivative/quanta/manual)"); // 7
 	Value_init.push_back(0.);	//	7
 	Variable_init.push_back("Particle energy"); // 8
-	Value_init.push_back(20.);	//	8
+	Value_init.push_back(0.);	//	8
 	Variable_init.push_back("Threshold"); // 9
 	Value_init.push_back(0.);	//	9
 	Variable_init.push_back("Integration steps"); // 10
@@ -61,7 +61,7 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	13
 	Variable_init.push_back("Smoothing"); // 14
 	Value_init.push_back(0.);	//	14
-	Variable_init.push_back("Charge divider"); // 15
+	Variable_init.push_back("Chamber value (Gy)"); // 15
 	Value_init.push_back(0.);	//	15
 
 	cout<<endl;
@@ -144,6 +144,7 @@ void EntryParameters(int config_simu)
 						}
 						else
 						{
+							Value_init[ind_value]=-1;
 							if(!buffer.compare("nothing"))
 								Value_init[ind_value]=-1;
 							if(!buffer.compare("proton_Cyrce"))
@@ -156,16 +157,32 @@ void EntryParameters(int config_simu)
 					}
 					if(ind_value==8)
 					{
-						value=(double)atof(buffer.c_str());
-						if(value==0.)
-							cout<<"No input data for primary particles energy, default value: "<<Variable_init[ind_value]<<" MeV; used"<<endl;
+						if(CheckDouble(buffer)==1)
+						{
+							value=(double)atof(buffer.c_str());
+							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<" MeV; new value: "<<value<<" MeV"<<endl;
+							Value_init[ind_value]=value;
+						}
 						else
 						{
-							if(value<0.)
-								cout<<"Multiple energies for primary particles"<<endl;
-							if(value>0.)	
-								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<"MeV; new value: "<<value<<" MeV"<<endl;
-							Value_init[ind_value]=value;
+							std::size_t found=buffer.find_first_of(' ');
+							std::string bufferofbuffer=buffer.substr(0,found);
+							if(!bufferofbuffer.compare("nothing"))
+								cout<<"No input data for primary particles energy"<<endl;
+							if(!bufferofbuffer.compare("multiple"))
+							{
+								cout<<"Multiple energy values for primary particles"<<endl;
+								buffer=buffer.substr(found+1);
+								ss2<<buffer;
+								ind_en=0;
+								do{
+									ss2>>multiple_energy[ind_en];
+									ind_en++;
+								}while(!ss2.eof()&&ind_en<=25);
+								ss2.clear();
+								// ind_en--;
+								Value_init[ind_value]=-1.;
+							}
 						}
 					}
 					if(ind_value==4||ind_value==10)
@@ -233,12 +250,16 @@ void EntryParameters(int config_simu)
 					}
 					if(ind_value==15)
 					{
-						if(!buffer.compare("0")||!buffer.compare("1"))
-							Value_init[ind_value]=1;
-						if(!buffer.compare("100"))
-							Value_init[ind_value]=100;
-						if(!buffer.compare("10000")||!buffer.compare("10k"))
-							Value_init[ind_value]=10E3;
+						if(CheckDouble(buffer)==1)
+						{
+							Value_init[ind_value]=(double)atof(buffer.c_str());
+							external_dose=(double)atof(buffer.c_str());
+						}
+						else
+						{
+							if(!buffer.compare("nothing"))
+								Value_init[ind_value]=0;
+						}
 					}
 				}	
 				else
@@ -311,7 +332,10 @@ void EntryParameters(int config_simu)
 	ivar=8;
 	if(Value_init[ivar]<0.)
 	{
-		cout<<" Multiple energies for primary particles"<<endl;
+		cout<<" Multiple energies for primary particles: "<<ind_en<<" values"<<endl;
+		for(int ii=0;ii<ind_en;ii++)
+			cout<<" "<<multiple_energy[ii]<<" MeV;";
+		cout<<endl;
 		dosedistribution=false;
 	}	
 	if(Value_init[ivar]==0.)
@@ -358,13 +382,10 @@ void EntryParameters(int config_simu)
 	}
 
 	ivar=15;
-	if(Value_init[ivar]==0||Value_init[ivar]==1||(Value_init[ivar]!=100&&Value_init[ivar]!=1E4))
-		cout<<" No charge divider used"<<endl;
+	if(Value_init[ivar]==0)
+		cout<<" No additional dose value used"<<endl;
 	else
-	{
-		diviseur_param=Value_init[ivar];
-		cout<<" Charge divided by "<<Value_init[ivar]<<endl;
-	}
+		cout<<" External dose value of "<<Value_init[ivar]<<" Gy"<<endl;
 
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
 	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -409,7 +430,12 @@ void EntryParameters(int config_simu)
 
 		ivar=8;
 		if(Value_init[ivar]<0.)
-			logfile<<" Multiple energies for primary particles"<<endl;
+		{
+			logfile<<" Multiple energies for primary particles: "<<ind_en<<" values"<<endl;
+			for(int ii=0;ii<ind_en;ii++)
+				logfile<<" "<<multiple_energy[ii]<<" MeV;";
+			logfile<<endl;
+		}
 		if(Value_init[ivar]==0)
 			logfile<<" No energy for the primary particles"<<endl;
 		if(Value_init[ivar]>0.)
@@ -444,10 +470,10 @@ void EntryParameters(int config_simu)
 			logfile<<" Smoothing applied"<<endl;
 
 		ivar=15;
-		if(Value_init[ivar]==1)
-			logfile<<" No charge divider used"<<endl;
+		if(Value_init[ivar]==0)
+			logfile<<" No additional dose value used"<<endl;
 		else
-			logfile<<" Charge divided by "<<Value_init[ivar]<<endl;
+			logfile<<" External dose value of "<<Value_init[ivar]<<" Gy"<<endl;
 
 		// for(ivar=4;ivar<Variable_init.size();ivar++)
 		// 	logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -725,23 +751,6 @@ void Lissage()
 	for(int i=0;i<N_STRIPS;i++)
 		lissage_file>>tmp>>lissage_factor[i][0]>>lissage_factor[i][1];
 	lissage_file.close();
-}
-
-void Diviseur()
-{
-	string filename;
-	if(diviseur_param==100.)
-		filename="Diviseur_100.txt";
-	ifstream diviseur_file(filename.c_str());
-	if(!diviseur_file)
-	{
-		cout<<" No input file for dividing device"<<endl;
-		return;
-	}
-	int tmp;
-	for(int i=0;i<N_STRIPS;i++)
-		diviseur_file>>tmp>>diviseur_factor[i][0]>>diviseur_factor[i][1];
-	diviseur_file.close();
 }
 
 void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[],double vect_charge_x[],double vect_charge_y[])
@@ -2428,6 +2437,7 @@ int main(int argc, char** argv)
 {
 	cout.precision(8);
 	system("rm -f Picture/*.png");
+	system("rm -f Sampling/*.png");
 	// cout.setf(std::ios_base::fixed | std::ios_base::scientific, std::ios_base::floatfield);
 	set_plot_style();
 	// char *filename;
@@ -2443,12 +2453,14 @@ int main(int argc, char** argv)
 	TFile* rootfile=new TFile("./PostAnalysis.root","RECREATE");
 	TText* Texte=new TText();
 	TString name_area;
+	TString name_smpl;
 	TString text_tmp;
 	unsigned short label;
 	int data_calib=0;
 	int data_meas=0;
 	int count_tot=0;
 	int count_int=0;
+	int count_smpl=0;
 	int integration;
 	int npeak;
 	int ii;
@@ -2506,8 +2518,8 @@ int main(int argc, char** argv)
 	TArrayD* AreaY=new TArrayD(N_STRIPS);
 	double ProfilX[N_STRIPS];
 	double ProfilY[N_STRIPS];
-	double vect_time_spl[MAX_SMPL];
-	double vect_charge_t_spl[MAX_SMPL];
+	double vect_time_smpl[MAX_SMPL];
+	double vect_charge_t_smpl[MAX_SMPL];
 	double vect_mean_x[MAX_SMPL];
 	double vect_mean_y[MAX_SMPL];
 	double vect_rms_x[MAX_SMPL];
@@ -2572,8 +2584,6 @@ int main(int argc, char** argv)
 		ProfilY[j]=0;
 		lissage_factor[j][0]=1.;
 		lissage_factor[j][1]=1.;
-		diviseur_factor[j][0]=diviseur_param;
-		diviseur_factor[j][1]=diviseur_param;
 	}
 	ChX->Reset();
 	ChY->Reset();
@@ -2582,8 +2592,6 @@ int main(int argc, char** argv)
 	AreaX->Reset();
 	AreaY->Reset();
 
-	if(diviseur_param!=1.)
-		Diviseur();
 	if(lissage_param==1)
 		Lissage();
 
@@ -2669,7 +2677,7 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
-							val=val*lissage_factor[j][0]*diviseur_factor[j][0];
+							val=val*lissage_factor[j][0];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
 							PreSFB[j]=val;
@@ -2679,7 +2687,7 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
-							val=val*lissage_factor[j][1]*diviseur_factor[j][1];
+							val=val*lissage_factor[j][1];
 							if(val>max)	max=val;
 							if(val<min)	min=val;
 							PreSFB[j]=val;
@@ -2731,7 +2739,7 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
-							val=val*lissage_factor[j][0]*diviseur_factor[j][0];
+							val=val*lissage_factor[j][0];
 							if(in_area==0)
 							// if(in_area==0&&(j>=borne_m_x&&j<borne_M_x)) // taille du plastique
 								chargeTot_signal_X+=val;
@@ -2743,7 +2751,7 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
-							val=val*lissage_factor[j][1]*diviseur_factor[j][1];
+							val=val*lissage_factor[j][1];
 							if(in_area==0)
 							// if(in_area==0&&(j>=borne_m_y&&j<borne_M_y)) // taille du plastique
 								chargeTot_signal_Y+=val;
@@ -3145,8 +3153,30 @@ int main(int argc, char** argv)
 				// else if(in_area==0&&tot_area>0)
 				else
 				{
-					TH1F* Profil_x_smpl=new TH1F("Profil_x_area","X profile in number of particles",N_STRIPS,1,33);
-					TH1F* Profil_y_smpl=new TH1F("Profil_y_area","Y profile in number of particles",N_STRIPS,1,33);
+					TCanvas *cSmpl= new TCanvas("Dose map");
+					cSmpl->SetCanvasSize(1000,1000);
+					double x1=.22;
+					double x2=.23;
+					double y1=.22;
+					double y2=.23;
+					TPad * pad1 = new TPad("pad1","pad1",0,0,x1,y1);
+					TPad * pad2 = new TPad("pad2","pad2",0,y2,x1,1);
+					TPad * pad3 = new TPad("pad3","pad3",x2,0,1,y1);
+					TPad * pad4 = new TPad("pad4","pad4",x2,y2,1,1);
+					pad1->SetTopMargin(0.1);
+					pad1->SetBottomMargin(0.1);
+					pad1->Draw();
+					pad2->SetTopMargin(0.1);
+					pad2->SetBottomMargin(0.1);
+					pad2->Draw();
+					pad3->SetTopMargin(0.1);
+					pad3->SetBottomMargin(0.1);
+					pad3->Draw();
+					pad4->SetTopMargin(0.1);
+					pad4->SetBottomMargin(0.1);
+					pad4->Draw();
+
+					TH2F* Map_smpl=new TH2F("Map_smpl","",N_STRIPS,1,33,N_STRIPS,1,33);
 					
 					mean_x=0.;
 					mean_y=0.;
@@ -3157,8 +3187,6 @@ int main(int argc, char** argv)
 					for(int i=0;i<N_STRIPS;i++)
 					{
 						ii=i+1;
-						Profil_x_smpl->SetBinContent(i+1,SamplX->GetAt(i));
-						Profil_y_smpl->SetBinContent(i+1,SamplY->GetAt(i));
 						if(SamplX->GetAt(i)>Threshold)
 						{
 							mean_x+=ii*SamplX->GetAt(i);
@@ -3194,18 +3222,79 @@ int main(int argc, char** argv)
 						mean_y=0.;
 						rms_y=0.;
 					}
-					vect_time_spl[nbSummedSample]=fasterTime;
-					vect_charge_t_spl[nbSummedSample]=(sum_x+sum_y)/2.;
+					vect_time_smpl[nbSummedSample]=fasterTime;
+					vect_charge_t_smpl[nbSummedSample]=(sum_x+sum_y)/2.;
 
 					vect_mean_x[nbSummedSample]=mean_x;
 					vect_rms_x[nbSummedSample]=rms_x;
 					vect_mean_y[nbSummedSample]=mean_y;
 					vect_rms_y[nbSummedSample]=rms_y;
 
+					for(int i=0;i<N_STRIPS;i++)
+						for(int k=0;k<N_STRIPS;k++)
+						{
+							if(sum_x>0.&&sum_y>0.)
+								Map_smpl->SetBinContent(i+1,k+1,SamplX->GetAt(i)*SamplY->GetAt(k)/(sum_x*sum_y)*(sum_x+sum_y)/2.);
+							else	
+								Map_smpl->SetBinContent(i+1,k+1,0.);
+						}
+
+					if(in_area==0)
+					{
+						pad2->cd();
+						TGraph *TG_Mean_y=new TGraph(nbSummedSample,vect_time_smpl,vect_mean_y);
+						TG_Mean_y->SetMarkerStyle(2);
+						TG_Mean_y->SetMarkerColor(2);
+						TG_Mean_y->SetLineColor(2);
+						TG_Mean_y->SetLineWidth(1.5);
+						TG_Mean_y->SetTitle("");
+						TG_Mean_y->GetXaxis()->SetTitle("Time (s)");
+						TG_Mean_y->GetXaxis()->SetTickSize(0.01);
+						TG_Mean_y->GetXaxis()->SetTitleSize(0.06);
+						TG_Mean_y->GetXaxis()->SetLabelSize(0.05);
+						TG_Mean_y->GetYaxis()->SetTitle("Position");
+						TG_Mean_y->GetYaxis()->SetTickSize(0.01);
+						TG_Mean_y->GetYaxis()->SetTitleSize(0.06);
+						TG_Mean_y->GetYaxis()->CenterTitle();
+						TG_Mean_y->GetYaxis()->SetLabelSize(0.05);
+						TG_Mean_y->Draw("ALP");
+
+						pad3->cd();
+						TGraph *TG_Mean_x=new TGraph(nbSummedSample,vect_time_smpl,vect_mean_x);
+						TG_Mean_x->SetMarkerStyle(2);
+						TG_Mean_x->SetMarkerColor(2);
+						TG_Mean_x->SetLineColor(2);
+						TG_Mean_x->SetLineWidth(1.5);
+						TG_Mean_x->SetTitle("");
+						TG_Mean_x->GetXaxis()->SetTitle("Time (s)");
+						TG_Mean_x->GetXaxis()->SetTickSize(0.01);
+						TG_Mean_x->GetXaxis()->SetTitleSize(0.06);
+						TG_Mean_x->GetXaxis()->SetLabelSize(0.05);
+						TG_Mean_x->GetYaxis()->SetTitle("Position");
+						TG_Mean_x->GetYaxis()->SetTickSize(0.01);
+						TG_Mean_x->GetYaxis()->SetTitleSize(0.06);
+						TG_Mean_x->GetYaxis()->CenterTitle();
+						TG_Mean_x->GetYaxis()->SetLabelSize(0.05);
+						TG_Mean_x->Draw("ALP");
+						TG_Mean_x->SaveAs("test.png");
+
+						pad4->cd();
+						Map_smpl->SetTitle("");
+						Map_smpl->SetTitleSize(0.0);
+						Map_smpl->SetStats(0);
+						Map_smpl->Draw("colz");	
+						name_smpl="Sampling/Smpl_";
+						name_smpl+=(count_smpl+1);
+						name_smpl+=".png";
+						cSmpl->SaveAs(name_smpl);
+						TG_Mean_x->Delete();
+						TG_Mean_y->Delete();
+						count_smpl++;
+					}
+					Map_smpl->Delete();
+					cSmpl->Destructor();
 					SamplX->Reset();
 					SamplY->Reset();
-					Profil_x_smpl->Delete();
-					Profil_y_smpl->Delete();
 					nbSummedSample++;
 				}
 				t1=fasterTime;
@@ -3214,6 +3303,7 @@ int main(int argc, char** argv)
 	}
 	count_tot--;
 	count_int--;
+	// system("ffmpeg -f image2 -i Sampling/Smpl_%d.png -r 24 -vcodec mpeg4 -b 15000k Sampling/Smpl.mp4");
 
 	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
 	for(int i=0;i<tot_area;i++)
@@ -3522,7 +3612,7 @@ int main(int argc, char** argv)
 		cSamp->Divide(1,4);
 
 		cSamp->cd(1);
-		TGraph *TG_Mean_x=new TGraph(nbSummedSample,vect_time_spl,vect_mean_x);
+		TGraph *TG_Mean_x=new TGraph(nbSummedSample,vect_time_smpl,vect_mean_x);
 		TG_Mean_x->SetMarkerStyle(2);
 		TG_Mean_x->SetMarkerColor(2);
 		TG_Mean_x->SetLineColor(2);
@@ -3541,7 +3631,7 @@ int main(int argc, char** argv)
 		TG_Mean_x->Draw("ALP");
 
 		cSamp->cd(2);
-		TGraph *TG_Mean_y=new TGraph(nbSummedSample,vect_time_spl,vect_mean_y);
+		TGraph *TG_Mean_y=new TGraph(nbSummedSample,vect_time_smpl,vect_mean_y);
 		TG_Mean_y->SetMarkerStyle(2);
 		TG_Mean_y->SetMarkerColor(2);
 		TG_Mean_y->SetLineColor(2);
@@ -3560,7 +3650,7 @@ int main(int argc, char** argv)
 		TG_Mean_y->Draw("ALP");
 
 		cSamp->cd(3);
-		TGraph *TG_Rms_x=new TGraph(nbSummedSample,vect_time_spl,vect_rms_x);
+		TGraph *TG_Rms_x=new TGraph(nbSummedSample,vect_time_smpl,vect_rms_x);
 		TG_Rms_x->SetMarkerStyle(2);
 		TG_Rms_x->SetMarkerColor(4);
 		TG_Rms_x->SetLineColor(4);
@@ -3579,7 +3669,7 @@ int main(int argc, char** argv)
 		TG_Rms_x->Draw("ALP");
 
 		cSamp->cd(4);
-		TGraph *TG_Rms_y=new TGraph(nbSummedSample,vect_time_spl,vect_rms_y);
+		TGraph *TG_Rms_y=new TGraph(nbSummedSample,vect_time_smpl,vect_rms_y);
 		TG_Rms_y->SetMarkerStyle(2);
 		TG_Rms_y->SetMarkerColor(4);
 		TG_Rms_y->SetLineColor(4);

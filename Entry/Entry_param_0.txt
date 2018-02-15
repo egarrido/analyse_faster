@@ -1,16 +1,16 @@
-File: diviseur_4_0001.fast
-Path for the file: CPO/01_2018/
+File: PBS_01_0001.fast
+Path for the file: CPO/02_2018/
 Background extraction (yes/no sub/function/default): yes
 Irradiation area finding way (charge/derivative/quanta/manual): derivative
 Boundaries (s): 21. 125.
 Threshold: 500.
 Exclusion strips X: 19 20
 Exclusion strips Y: 19 20 
-Calibrate data: 0.0025
-Particle energy: 0.
-Time sampling (s): 10000.
+Calibrate data: nothing
+Particle energy: multiple 10. 20. 30.1 40.2
+Time sampling (s): 10.
 Acquisition time for electronic offset (s): 20.
 Integration steps: 50
 Gaussian to fit: 1
 Smoothing: yes
-Charge divider: 1
+Chamber value (Gy): 1

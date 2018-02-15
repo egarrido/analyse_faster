@@ -80,7 +80,7 @@ const int N_STRIPS=32;
 const int FIRST_ELEC=1;
 const int LAST_ELEC=31;
 const int MAX_PEAK=10;
-const int MAX_SMPL=1000;
+const int MAX_SMPL=10000;
 const int MAX_INTEGR=1000000;
 const double strip_width=.3; //cm
 const double gap_Dosion=3.; //mm
@@ -100,9 +100,11 @@ int borne_M_y=17;
 double bound_min=30.;
 double bound_max=60.;
 double bound_eoff=20.;
-double diviseur_param=1.;
 double energy=0.;
+int ind_en;
+double multiple_energy[25];
 double calib_entry=0.;
+double external_dose=0.;
 
 // const double SamplingTime=40e-6;  	// 40   us
 // const double SamplingTime=DBL_MAX;
@@ -151,7 +153,6 @@ double debut_eoff;
 double fin_eoff;
 double offXY[N_STRIPS][2];
 double lissage_factor[N_STRIPS][2];
-double diviseur_factor[N_STRIPS][2];
 
 void set_plot_style()
 {
