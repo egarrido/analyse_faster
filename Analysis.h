@@ -12,6 +12,7 @@
 #include "TF2.h"
 #include "TTree.h"
 #include "TCanvas.h"
+#include "TImage.h"
 #include "TRandom.h"
 #include "TVirtualFitter.h"
 #include "TSpectrum.h"
@@ -85,6 +86,7 @@ const int MAX_INTEGR=1000000;
 const double strip_width=.3; //cm
 const double gap_Dosion=3.; //mm
 
+char Execution[80];
 bool dosedistribution=true;
 int bkgnd_param=0;
 int Gausstofit=1;

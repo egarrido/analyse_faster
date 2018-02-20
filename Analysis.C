@@ -2437,7 +2437,7 @@ int main(int argc, char** argv)
 {
 	cout.precision(8);
 	system("rm -f Picture/*.png");
-	system("rm -f Sampling/*.png");
+	system("rm -f Sampling/*.png Sampling/*.pdf Sampling/*.mp4");
 	// cout.setf(std::ios_base::fixed | std::ios_base::scientific, std::ios_base::floatfield);
 	set_plot_style();
 	// char *filename;
@@ -2462,6 +2462,7 @@ int main(int argc, char** argv)
 	int count_int=0;
 	int count_smpl=0;
 	int integration;
+	int int_fps;
 	int npeak;
 	int ii;
 	int i_cx;
@@ -2562,6 +2563,7 @@ int main(int argc, char** argv)
 	EntryParameters(config_simu);
 	strcpy(filename,data_faster_file.c_str());
 	integration=IntegrationStep;
+	int_fps=(int)(1./SamplingTime);
 
 	char command_line[80];
 	sprintf(command_line,"faster_disfast %s -I",filename);
@@ -3155,28 +3157,30 @@ int main(int argc, char** argv)
 				{
 					TCanvas *cSmpl= new TCanvas("Dose map");
 					cSmpl->SetCanvasSize(1000,1000);
-					double x1=.22;
+					double x1=.23;
 					double x2=.23;
-					double y1=.22;
-					double y2=.23;
-					TPad * pad1 = new TPad("pad1","pad1",0,0,x1,y1);
-					TPad * pad2 = new TPad("pad2","pad2",0,y2,x1,1);
-					TPad * pad3 = new TPad("pad3","pad3",x2,0,1,y1);
-					TPad * pad4 = new TPad("pad4","pad4",x2,y2,1,1);
-					pad1->SetTopMargin(0.1);
-					pad1->SetBottomMargin(0.1);
-					pad1->Draw();
-					pad2->SetTopMargin(0.1);
-					pad2->SetBottomMargin(0.1);
-					pad2->Draw();
-					pad3->SetTopMargin(0.1);
-					pad3->SetBottomMargin(0.1);
-					pad3->Draw();
-					pad4->SetTopMargin(0.1);
-					pad4->SetBottomMargin(0.1);
-					pad4->Draw();
+					double y1=.78;
+					double y2=.78;
+					// TPad * pad1 = new TPad("pad1","pad1",0,0,x1,y1);
+					// TPad * pad2 = new TPad("pad2","pad2",0,y2,x1,1);
+					// TPad * pad3 = new TPad("pad3","pad3",x2,0,1,y1);
+					// TPad * pad4 = new TPad("pad4","pad4",x2,y2,1,1);
+					// pad1->SetTopMargin(0.1);
+					// pad1->SetBottomMargin(0.1);
+					// pad1->Draw();
+					// pad2->SetTopMargin(0.1);
+					// pad2->SetBottomMargin(0.1);
+					// pad2->Draw();
+					// pad3->SetTopMargin(0.1);
+					// pad3->SetBottomMargin(0.1);
+					// pad3->Draw();
+					// pad4->SetTopMargin(0.1);
+					// pad4->SetBottomMargin(0.1);
+					// pad4->Draw();
 
 					TH2F* Map_smpl=new TH2F("Map_smpl","",N_STRIPS,1,33,N_STRIPS,1,33);
+					TH1F *hSmplX = new TH1F("hSmplX","",N_STRIPS,.5,32.5);
+					TH1F *hSmplY = new TH1F("hSmplY","",N_STRIPS,.5,32.5);
 					
 					mean_x=0.;
 					mean_y=0.;
@@ -3189,12 +3193,14 @@ int main(int argc, char** argv)
 						ii=i+1;
 						if(SamplX->GetAt(i)>Threshold)
 						{
+							hSmplX->SetBinContent(i+1,SamplX->GetAt(i));
 							mean_x+=ii*SamplX->GetAt(i);
 							rms_x+=ii*ii*SamplX->GetAt(i);
 							sum_x+=SamplX->GetAt(i);
 						}
 						if(SamplY->GetAt(i)>Threshold)
 						{
+							hSmplY->SetBinContent(i+1,SamplY->GetAt(i));
 							mean_y+=ii*SamplY->GetAt(i);
 							rms_y+=ii*ii*SamplY->GetAt(i);
 							sum_y+=SamplY->GetAt(i);
@@ -3241,57 +3247,66 @@ int main(int argc, char** argv)
 
 					if(in_area==0)
 					{
-						pad2->cd();
-						TGraph *TG_Mean_y=new TGraph(nbSummedSample,vect_time_smpl,vect_mean_y);
-						TG_Mean_y->SetMarkerStyle(2);
-						TG_Mean_y->SetMarkerColor(2);
-						TG_Mean_y->SetLineColor(2);
-						TG_Mean_y->SetLineWidth(1.5);
-						TG_Mean_y->SetTitle("");
-						TG_Mean_y->GetXaxis()->SetTitle("Time (s)");
-						TG_Mean_y->GetXaxis()->SetTickSize(0.01);
-						TG_Mean_y->GetXaxis()->SetTitleSize(0.06);
-						TG_Mean_y->GetXaxis()->SetLabelSize(0.05);
-						TG_Mean_y->GetYaxis()->SetTitle("Position");
-						TG_Mean_y->GetYaxis()->SetTickSize(0.01);
-						TG_Mean_y->GetYaxis()->SetTitleSize(0.06);
-						TG_Mean_y->GetYaxis()->CenterTitle();
-						TG_Mean_y->GetYaxis()->SetLabelSize(0.05);
-						TG_Mean_y->Draw("ALP");
+						// pad4->cd();
+						// hSmplX->SetFillColor(2);
+						// hSmplX->GetXaxis()->SetTickSize(0.01);
+						// hSmplX->GetXaxis()->SetNdivisions(N_STRIPS);
+						// // hSmplX->GetXaxis()->SetTitle("Strip");
+						// hSmplX->GetXaxis()->CenterTitle();
+						// hSmplX->GetXaxis()->SetTickSize(0.01);
+						// hSmplX->GetXaxis()->SetTitleSize(0.0);
+						// hSmplX->GetXaxis()->SetLabelSize(0.05);
+						// hSmplX->GetYaxis()->SetTickSize(0.01);
+						// hSmplX->GetYaxis()->SetTitle("");
+						// hSmplX->GetYaxis()->CenterTitle();
+						// hSmplX->GetYaxis()->SetTickSize(0.01);
+						// hSmplX->GetYaxis()->SetTitleSize(0.0);
+						// hSmplX->GetYaxis()->SetLabelSize(0.05);
+						// hSmplX->SetBarWidth(0.8);
+						// hSmplX->SetBarOffset(0.1);
+						// hSmplX->SetStats(0);
+						// hSmplX->Draw("b");
+						// pad4->SaveAs("Sampling/tmp.pdf","pdf");
 
-						pad3->cd();
-						TGraph *TG_Mean_x=new TGraph(nbSummedSample,vect_time_smpl,vect_mean_x);
-						TG_Mean_x->SetMarkerStyle(2);
-						TG_Mean_x->SetMarkerColor(2);
-						TG_Mean_x->SetLineColor(2);
-						TG_Mean_x->SetLineWidth(1.5);
-						TG_Mean_x->SetTitle("");
-						TG_Mean_x->GetXaxis()->SetTitle("Time (s)");
-						TG_Mean_x->GetXaxis()->SetTickSize(0.01);
-						TG_Mean_x->GetXaxis()->SetTitleSize(0.06);
-						TG_Mean_x->GetXaxis()->SetLabelSize(0.05);
-						TG_Mean_x->GetYaxis()->SetTitle("Position");
-						TG_Mean_x->GetYaxis()->SetTickSize(0.01);
-						TG_Mean_x->GetYaxis()->SetTitleSize(0.06);
-						TG_Mean_x->GetYaxis()->CenterTitle();
-						TG_Mean_x->GetYaxis()->SetLabelSize(0.05);
-						TG_Mean_x->Draw("ALP");
-						TG_Mean_x->SaveAs("test.png");
+						// hSmplY->SetFillColor(4);
+						// hSmplY->GetXaxis()->SetTickSize(0.01);
+						// hSmplY->GetXaxis()->SetNdivisions(N_STRIPS);
+						// // hSmplY->GetXaxis()->SetTitle("Strip");
+						// hSmplY->GetXaxis()->CenterTitle();
+						// hSmplY->GetXaxis()->SetTickSize(0.01);
+						// hSmplY->GetXaxis()->SetTitleSize(0.0);
+						// hSmplY->GetXaxis()->SetLabelSize(0.0);
+						// hSmplY->GetYaxis()->SetTickSize(0.01);
+						// hSmplY->GetYaxis()->SetTitle("");
+						// hSmplY->GetYaxis()->CenterTitle();
+						// hSmplY->GetYaxis()->SetTickSize(0.01);
+						// hSmplY->GetYaxis()->SetTitleSize(0.0);
+						// hSmplY->GetYaxis()->SetLabelSize(0.05);
+						// hSmplY->SetBarWidth(0.8);
+						// hSmplY->SetBarOffset(0.1);
+						// hSmplY->SetStats(0);
+						// hSmplY->Draw("b");
+						
+						// pad1->cd();
+						// TImage *img = TImage::Open("Sampling/tmp.pdf");
+						// img->Flip(90);
+						// img->Draw();
 
-						pad4->cd();
-						Map_smpl->SetTitle("");
+						// pad3->cd();
+						Map_smpl->SetTitle(Form("Sampling: %d, time: %2.0lf sec",count_smpl+1,round(vect_time_smpl[nbSummedSample])));
 						Map_smpl->SetTitleSize(0.0);
 						Map_smpl->SetStats(0);
+						Map_smpl->SetMinimum(0.);
 						Map_smpl->Draw("colz");	
 						name_smpl="Sampling/Smpl_";
 						name_smpl+=(count_smpl+1);
 						name_smpl+=".png";
 						cSmpl->SaveAs(name_smpl);
-						TG_Mean_x->Delete();
-						TG_Mean_y->Delete();
 						count_smpl++;
 					}
 					Map_smpl->Delete();
+					hSmplX->Delete();
+					hSmplY->Delete();
 					cSmpl->Destructor();
 					SamplX->Reset();
 					SamplY->Reset();
@@ -3303,7 +3318,9 @@ int main(int argc, char** argv)
 	}
 	count_tot--;
 	count_int--;
-	// system("ffmpeg -f image2 -i Sampling/Smpl_%d.png -r 24 -vcodec mpeg4 -b 15000k Sampling/Smpl.mp4");
+	
+	sprintf(Execution,"ffmpeg -r %d -f image2 -s 1000x1000 -i Sampling/Smpl_%%d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p Sampling/Smpl.mp4",int_fps);
+	system(Execution);
 
 	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
 	for(int i=0;i<tot_area;i++)

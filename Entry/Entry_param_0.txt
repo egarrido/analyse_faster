@@ -8,7 +8,7 @@ Exclusion strips X: 19 20
 Exclusion strips Y: 19 20 
 Calibrate data: nothing
 Particle energy: multiple 10. 20. 30.1 40.2
-Time sampling (s): 10.
+Time sampling (s): .1
 Acquisition time for electronic offset (s): 20.
 Integration steps: 50
 Gaussian to fit: 1
