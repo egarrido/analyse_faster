@@ -825,7 +825,7 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 
 void Lissage()
 {
-	ifstream lissage_file("Lissage_dosion_LPC.txt");
+	ifstream lissage_file("Lissage_LPC.txt");
 	int tmp;
 	if(!lissage_file)
 	{
