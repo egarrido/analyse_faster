@@ -17,8 +17,8 @@ Le dossier doit contenir les fichiers :
     Seuil_data.h        - valeurs des seuils utilisées lors d'un recalcul des quanta issus d'un 
                           scaler.
 
-  Pour changer l'utilisation des label il faut modifier les lignes correspondantes dans la libraire
-  Analysis.h
+  Pour changer l'utilisation des label il faut modifier les lignes correspondantes dans la
+  libraire Analysis.h
 
 Les sous-dossiers :
     Entry/    - Contient les fichiers d'entrée de toutes les différentes configurations.
