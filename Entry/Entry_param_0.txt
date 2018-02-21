@@ -1,4 +1,4 @@
-File: PBS_01_0001.fast
+File: PBS_03_0001.fast
 Path for the file: CPO/02_2018/
 Background extraction (yes/no sub/function/default): yes
 Irradiation area finding way (charge/derivative/quanta/manual): derivative
@@ -6,9 +6,9 @@ Boundaries (s): 21. 125.
 Threshold: 500.
 Exclusion strips X: 19 20
 Exclusion strips Y: 19 20 
-Calibrate data: nothing
-Particle energy: multiple 10. 20. 30.1 40.2
-Time sampling (s): .1
+Calibrate data: multiple 1. 2. 2.2 3.
+Particle energy: multiple 100. 200. 150. 200.
+Time sampling (s): 1000.
 Acquisition time for electronic offset (s): 20.
 Integration steps: 50
 Gaussian to fit: 1

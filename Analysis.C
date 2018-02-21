@@ -137,34 +137,69 @@ void EntryParameters(int config_simu)
 					}
 					if(ind_value==3)
 					{
+						Value_init[ind_value]=0.;
+						calibrage_used=0;
 						if(CheckDouble(buffer)==1)
 						{
-							Value_init[ind_value]=0;
-							calib_entry=(double)atof(buffer.c_str());
+							value=(double)atof(buffer.c_str());
+							if(value<=0.)
+								cout<<"No valid input data for calibration:"<<value<<endl;
+							else
+							{
+								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<" fC/part; new value: "<<value<<" fC/part"<<endl;
+								Value_init[ind_value]=value;
+								calibrage_used=1;
+							}
 						}
 						else
 						{
-							Value_init[ind_value]=-1;
-							if(!buffer.compare("nothing"))
-								Value_init[ind_value]=-1;
-							if(!buffer.compare("proton_Cyrce"))
-								Value_init[ind_value]=1;
-							if(!buffer.compare("proton_Arronax"))
-								Value_init[ind_value]=2;
-							if(!buffer.compare("proton_Arronax_68_MeV"))
-								Value_init[ind_value]=3;
+							std::size_t found=buffer.find_first_of(' ');
+							std::string bufferofbuffer=buffer.substr(0,found);
+							if(!bufferofbuffer.compare("nothing"))
+								cout<<"No input data for calibration"<<endl;
+							if(!bufferofbuffer.compare("proton_Cyrce"))
+								calibrage_used=2;
+							if(!bufferofbuffer.compare("proton_Arronax"))
+								calibrage_used=3;
+							if(!bufferofbuffer.compare("proton_Arronax_68_MeV"))
+								calibrage_used=4;
+							if(!bufferofbuffer.compare("multiple"))
+							{
+								calibrage_used=5;
+								cout<<"Multiple calibration values for primary particles"<<endl;
+								buffer=buffer.substr(found+1);
+								ss2<<buffer;
+								ind_cal=0;
+								do{
+									ss2>>multiple_calib[ind_cal];
+									ind_cal++;
+								}while(!ss2.eof()&&ind_cal<=25);
+								ss2.clear();
+								// ind_cal--;
+							}
 						}
 					}
 					if(ind_value==8)
 					{
+						energy=0.;
 						if(CheckDouble(buffer)==1)
 						{
 							value=(double)atof(buffer.c_str());
-							cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<" MeV; new value: "<<value<<" MeV"<<endl;
-							Value_init[ind_value]=value;
+							if(value<=0.)
+							{
+								cout<<"No valid input data for primary particles energy:"<<value<<endl;
+								Value_init[ind_value]=0.;
+							}
+							else
+							{
+								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<" MeV; new value: "<<value<<" MeV"<<endl;
+								Value_init[ind_value]=value;
+								energy=value;
+							}
 						}
 						else
 						{
+							Value_init[ind_value]=0.;
 							std::size_t found=buffer.find_first_of(' ');
 							std::string bufferofbuffer=buffer.substr(0,found);
 							if(!bufferofbuffer.compare("nothing"))
@@ -182,6 +217,7 @@ void EntryParameters(int config_simu)
 								ss2.clear();
 								// ind_en--;
 								Value_init[ind_value]=-1.;
+								energy=-1.;
 							}
 						}
 					}
@@ -317,17 +353,29 @@ void EntryParameters(int config_simu)
 	bkgnd_param=Value_init[ivar];
 	
 	ivar=3;
-	if(Value_init[ivar]==0)
-		cout<<" Calibration value: "<<calib_entry<<" fC/part"<<endl;
-	if(Value_init[ivar]==-1)
+	if(calibrage_used==5)
+	{
+		cout<<" Multiple calibration values: "<<ind_cal<<" values"<<endl;
+		for(int ii=0;ii<ind_cal;ii++)
+			cout<<" "<<multiple_calib[ii]<<" fC/part;";
+		cout<<endl;
+	}	
+	if(calibrage_used==0&&energy==0)
 		cout<<" No calibration value"<<endl;
-	if(Value_init[ivar]==1)
+	if(calibrage_used==0&&energy!=0)
+	{
+		cout<<" Calibration from energy used"<<endl;
+		calibrage_used=6;
+	}
+	if(calibrage_used==1)
+		cout<<" Calibration value: "<<Value_init[ivar]<<" fC/part"<<endl;
+	if(calibrage_used==2)
 		cout<<" Cyrce calibration values used"<<endl;
-	if(Value_init[ivar]==2)
+	if(calibrage_used==3)
 		cout<<" Arronax calibration values used"<<endl;
-	if(Value_init[ivar]==3)
+	if(calibrage_used==4)
 		cout<<" Arronax calibration value used for 68 MeV protons"<<endl;
-	calibrage_used=Value_init[ivar];
+	calib_entry=Value_init[ivar];
 
 	ivar=8;
 	if(Value_init[ivar]<0.)
@@ -336,22 +384,27 @@ void EntryParameters(int config_simu)
 		for(int ii=0;ii<ind_en;ii++)
 			cout<<" "<<multiple_energy[ii]<<" MeV;";
 		cout<<endl;
-		dosedistribution=false;
 	}	
 	if(Value_init[ivar]==0.)
-	{
 		cout<<" No energy for the primary particles"<<endl;
+	if(Value_init[ivar]>0.)
+		cout<<" Energy of the particles: "<<energy<<endl;
+
+	if(ind_en!=ind_cal)
+	{
+		cout<<" Be aware that the numbers of calibration and energy values are different"<<endl;
 		dosedistribution=false;
 	}
-	if(Value_init[ivar]>0.)
-		cout<<" Energy of the particles: "<<Value_init[ivar]<<endl;
-	energy=Value_init[ivar];
+	if(energy==0.&&calibrage_used==0)
+		dosedistribution=false;
 
 	ivar=4;
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
+	SamplingTime=Value_init[ivar];
 
 	ivar=10;
 	cout<<" "<<Variable_init[ivar]<<": "<<(int)Value_init[ivar]<<endl;
+	IntegrationStep=(int)Value_init[ivar];
 
 	ivar=12;
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -417,15 +470,24 @@ void EntryParameters(int config_simu)
 		}
 		
 		ivar=3;
-		if(Value_init[ivar]==0)
-			logfile<<" Calibration value: "<<calib_entry<<" fC/part"<<endl;
-		if(Value_init[ivar]==-1)
+		if(calibrage_used==5)
+		{
+			logfile<<" Multiple calibration values: "<<ind_cal<<" values"<<endl;
+			for(int ii=0;ii<ind_cal;ii++)
+				logfile<<" "<<multiple_calib[ii]<<" fC/part;";
+			logfile<<endl;
+		}	
+		if(calibrage_used==0&&energy==0)
 			logfile<<" No calibration value"<<endl;
-		if(Value_init[ivar]==1)
+		if(calibrage_used==0&&energy!=0)
+			logfile<<" Calibration from energy used"<<endl;
+		if(calibrage_used==1)
+			logfile<<" Calibration value: "<<Value_init[ivar]<<" fC/part"<<endl;
+		if(calibrage_used==2)
 			logfile<<" Cyrce calibration values used"<<endl;
-		if(Value_init[ivar]==2)
+		if(calibrage_used==3)
 			logfile<<" Arronax calibration values used"<<endl;
-		if(Value_init[ivar]==3)
+		if(calibrage_used==4)
 			logfile<<" Arronax calibration value used for 68 MeV protons"<<endl;
 
 		ivar=8;
@@ -440,6 +502,9 @@ void EntryParameters(int config_simu)
 			logfile<<" No energy for the primary particles"<<endl;
 		if(Value_init[ivar]>0.)
 			logfile<<" Energy of the particles: "<<Value_init[ivar]<<endl;
+
+		if(ind_en!=ind_cal)
+			logfile<<" Be aware that the numbers of calibration and energy values are different"<<endl;
 
 		ivar=4;
 		logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -481,8 +546,6 @@ void EntryParameters(int config_simu)
 		logfile<<endl;
 	}
 
-	SamplingTime=Value_init[4];
-	IntegrationStep=(int)Value_init[10];
 	data_folder="Output/"+data_file;
 }
 
@@ -583,27 +646,48 @@ double Calib_value(int area,int in_area,double e_part)
 		return 0.;
 
 	if(calibrage_used==0)
+		return 0.;
+		
+	if(calibrage_used==1)
 		return calib_entry; 
 
-	if(calibrage_used==-1)
-		return Loss_value(energy,1.2e-3)/W_air*q*1.E15;
+	if(calibrage_used==2)
+	{
+		if(e_part==0.)
+			return 1000./data_calib[area];
+		else
+		{
+			calib_polynome=data_par[0]+data_par[1]*e_part+data_par[2]*pow(e_part,2)+data_par[3]*pow(e_part,3);
+			return 1000./calib_polynome;
+		}
+	}
 
 	if(calibrage_used==3)
 		return 0.028431749; //68 MeV p+ Arronax
 
-	return 0.;
+	if(calibrage_used==4)
+		return 0.028431749; //68 MeV p+ Arronax
+
+	if(calibrage_used==5)
+	{
+		int indice=area%ind_cal;
+		return multiple_calib[area];
+	}
+	
+	if(calibrage_used==6)
+	{
+		int indice=area%ind_en;
+		return multiple_calib_th[area];
+	}
+
+	if(calibrage_used==-1)
+		return Loss_value(energy,1.2e-3)/W_air*q*1.E15;
+
 	// return .01875; //120 MeV
 	// return .01532; //160 MeV
 	// return .01339; //196 MeV
 	// return .01322; //200 MeV
 	// return Loss_value(e_part,1.2e-3)/W_air*q*1.E15;
-	if(e_part==0.)
-		return 1000./calib_data[area];
-	else
-	{
-		calib_polynome=calib_par[0]+calib_par[1]*e_part+calib_par[2]*pow(e_part,2)+calib_par[3]*pow(e_part,3);
-		return 1000./calib_polynome;
-	}
 }
 
 void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
@@ -2499,7 +2583,6 @@ int main(int argc, char** argv)
 	double min;
 	double max;
 	double calib_factor;
-	double calib_th;
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
 	double chargeTot_signal_Y=0.;
@@ -2517,6 +2600,8 @@ int main(int argc, char** argv)
 	TArrayD* SamplY=new TArrayD(N_STRIPS);
 	TArrayD* AreaX=new TArrayD(N_STRIPS);
 	TArrayD* AreaY=new TArrayD(N_STRIPS);
+	TArrayD* TotalX=new TArrayD(N_STRIPS);
+	TArrayD* TotalY=new TArrayD(N_STRIPS);
 	double ProfilX[N_STRIPS];
 	double ProfilY[N_STRIPS];
 	double vect_time_smpl[MAX_SMPL];
@@ -2554,17 +2639,61 @@ int main(int argc, char** argv)
 	double* vect_intensity_inst=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* matrix_fluence=(double*)malloc(bin_up*bin_up*sizeof(double));
 
-	// ofstream errrel("Output.txt",std::ios::out);
+	ofstream errrel("Output.txt",std::ios::out);
 
 	int config_simu=0;
 	if(argc>1)
 		config_simu=(int)atof(argv[1]);
 
 	EntryParameters(config_simu);
+
+	if(energy>0.)
+	{
+		calib_energy=Loss_value(energy,1.2e-3)/W_air*q*1.E15;
+		if(calibrage_used==1)
+		{
+			cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+			cout<<"Valeur de calibrage donnée : "<<calib_entry<<" fC/part."<<endl;
+			if(logfileprint==true)
+			{
+				logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+				logfile<<"Valeur de calibrage donnée : "<<calib_entry<<" fC/part."<<endl;
+			}
+		}
+		else
+		{
+			cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+			if(logfileprint==true)
+				logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+		}
+	}
+	if(energy<1.)
+	{
+		for(int i=0;i<ind_en;i++)
+		{
+			multiple_calib_th[i]=Loss_value(multiple_energy[i],1.2e-3)/W_air*q*1.E15;
+			if(calibrage_used==5&&ind_cal==ind_en)
+			{
+				cout<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+				cout<<"Valeur de calibrage donnée : "<<multiple_calib[i]<<" fC/part."<<endl;
+				if(logfileprint==true)
+				{
+					logfile<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+					logfile<<"Valeur de calibrage donnée : "<<multiple_calib[i]<<" fC/part."<<endl;
+				}
+			}
+			else
+			{
+				cout<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+				if(logfileprint==true)
+					logfile<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+			}
+		}
+	}
+
 	strcpy(filename,data_faster_file.c_str());
 	integration=IntegrationStep;
 	int_fps=(int)(1./SamplingTime);
-
 	char command_line[80];
 	sprintf(command_line,"faster_disfast %s -I",filename);
 	system(command_line);
@@ -2593,6 +2722,8 @@ int main(int argc, char** argv)
 	SamplY->Reset();
 	AreaX->Reset();
 	AreaY->Reset();
+	TotalX->Reset();
+	TotalY->Reset();
 
 	if(lissage_param==1)
 		Lissage();
@@ -2780,6 +2911,7 @@ int main(int argc, char** argv)
 						sum_x+=val;
 					val+=SamplX->GetAt(j);
 					SamplX->SetAt(val,j);
+					// TotalX->SetAt(val,j);
 					if(in_area==0)
 					{
 						val=ChX->GetAt(j)+AreaX->GetAt(j);
@@ -2792,6 +2924,7 @@ int main(int argc, char** argv)
 						sum_y+=val;
 					val+=SamplY->GetAt(j);
 					SamplY->SetAt(val,j);
+					// TotalY->SetAt(val,j);
 					if(in_area==0)
 					{
 						val=ChY->GetAt(j)+AreaY->GetAt(j);
@@ -2852,6 +2985,13 @@ int main(int argc, char** argv)
 				// for(int jj=0;jj<N_STRIPS;jj++)
 				// 	cout<<jj+1<<" "<<AreaX->GetAt(jj)/duration<<" "<<AreaY->GetAt(jj)/duration<<endl;
 				// cout<<"------------------------"<<endl;
+				for(int jj=0;jj<N_STRIPS;jj++)
+				{
+					val=TotalX->GetAt(jj)+AreaX->GetAt(jj);
+					TotalX->SetAt(val,jj);
+					val=TotalY->GetAt(jj)+AreaY->GetAt(jj);
+					TotalY->SetAt(val,jj);
+				}
 
 				delete gROOT->FindObject("FWHM");	// Pourquoi ? Parce que Root
 				
@@ -3318,9 +3458,15 @@ int main(int argc, char** argv)
 	}
 	count_tot--;
 	count_int--;
+	count_smpl--;
 	
-	sprintf(Execution,"ffmpeg -r %d -f image2 -s 1000x1000 -i Sampling/Smpl_%%d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p Sampling/Smpl.mp4",int_fps);
-	system(Execution);
+	if(count_smpl>0)
+	{
+		sprintf(Execution,"ffmpeg -r %d -f image2 -s 1000x1000 -i Sampling/Smpl_%%d.png -vcodec libx264 -crf 25  -pix_fmt yuv420p Sampling/Smpl.mp4",int_fps);
+		cout<<"FFMPEG commande: "<<endl;
+		cout<<Execution<<endl;
+		system(Execution);
+	}
 
 	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
 	for(int i=0;i<tot_area;i++)
@@ -3332,6 +3478,14 @@ int main(int argc, char** argv)
 			<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Charge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 	}
 	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
+
+	errrel<<"------------------------"<<endl;
+	errrel<<"Piste et charges totales"<<endl;
+	// double duration=(signal_time[count_area][1]-signal_time[count_area][0]);
+	double duration=1.; // CPO fourni une même quantité en intégrale et pas instantanée 
+	for(int jj=0;jj<N_STRIPS;jj++)
+		errrel<<jj+1<<" "<<TotalX->GetAt(jj)/duration<<" "<<TotalY->GetAt(jj)/duration<<endl;
+	errrel<<"------------------------"<<endl;
 
 	TH2F* TH2_Map=new TH2F("TH2_Map","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
 	TH1F* Profil_x=new TH1F("ProfX","X profile in number of particles",N_STRIPS,1,33);
@@ -3723,16 +3877,6 @@ int main(int argc, char** argv)
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
 
-	if(energy>0.)
-	{
-		calib_th=Loss_value(energy,1.2e-3)/W_air*q*1.E15;
-		cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_th<<" fC/part."<<endl;
-		if(logfileprint==true)
-			logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_th<<" fC/part."<<endl;
-	}
-
-
-
 	// if(Vect_calib_factor.size()>0)
 	// {
 	// 	for(int i=0;i<Vect_calib_factor.size();i++)
@@ -3747,7 +3891,7 @@ int main(int argc, char** argv)
 	rootfile->Write();
 	rootfile->Close();
 
-	// errrel.close();
+	errrel.close();
 	if(logfileprint==true)
 	{
 		logfile.close();

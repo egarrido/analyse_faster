@@ -103,8 +103,12 @@ double bound_min=30.;
 double bound_max=60.;
 double bound_eoff=20.;
 double energy=0.;
+double calib_energy=0.;
 int ind_en;
+int ind_cal;
 double multiple_energy[25];
+double multiple_calib_th[25];
+double multiple_calib[25];
 double calib_entry=0.;
 double external_dose=0.;
 
