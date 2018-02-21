@@ -1,8 +1,8 @@
-*******************************************************************************************************************
-*                                                                                                                 *
-*                                      Programme d'analyse de données FASTER                                      *
-*                                                                                                                 *
-*******************************************************************************************************************
+***************************************************************************************************
+*                                                                                                 *
+*                         Programme d'analyse de données FASTER                                   *
+*                                                                                                 *
+***************************************************************************************************
 
 Le dossier doit contenir les fichiers :
     Analysis            - exécutable.
@@ -14,14 +14,18 @@ Le dossier doit contenir les fichiers :
     Lissage_XXX.txt     - fichier contenant les valeurs de lissage du Dosion XXX.
     Makefile             
     Offset.txt          - valeurs par défaut des offset électroniques.
-    Seuil_data.h        - valeurs des seuils utilisées lors d'un recalcul des quanta issus d'un scaler.
+    Seuil_data.h        - valeurs des seuils utilisées lors d'un recalcul des quanta issus d'un 
+                          scaler.
 
-  Pour changer l'utilisation des label il faut modifier les lignes correspondantes dans la libraire Analysis.h
+  Pour changer l'utilisation des label il faut modifier les lignes correspondantes dans la libraire
+  Analysis.h
 
 Les sous-dossiers :
     Entry/    - Contient les fichiers d'entrée de toutes les différentes configurations.
-    Ouput/    - Contient les fichiers de sortie qui sont stockés dans un dossier propre à chaque fichier faster.
+    Ouput/    - Contient les fichiers de sortie qui sont stockés dans un dossier propre à chaque 
+                fichier faster.
     Picture/  - Contient les images générées lors de la dernière exécution du programme.
+    Sampling/ - Contient les images et le fichier vidéo générés par le sampling.
 
 L'exécution du programme se fait en tapant la commande
     ./Analysis [arg]
@@ -62,38 +66,41 @@ Le fichier de paramètres d'entrée se compose de la sorte
         quanta      - discrimination sur la valeur des quanta avec la valeur seuil "Threshold".
         Méthode utile et efficace mais possible uniquement si des données de scaler sont présentes.
 
-        manual      - méthode manuelle pour définir la plage unique d'irradiation par l'intermédiaire
-        des valeurs "Boundaries" fournies en seconde.
+        manual      - méthode manuelle pour définir la plage unique d'irradiation par 
+        l'intermédiaire des valeurs "Boundaries" fournies en seconde.
 
-    Boundaries (s): Valeurs de début et fin de zone d'irradiation en seconde pour la discrimiation manuelle.
+    Boundaries (s): Valeurs de début et fin de zone d'irradiation en seconde pour la discrimiation 
+    manuelle.
 
     Threshold: Valeur de seuil utilisée par les méthodes "charge", "derivative" et "quanta".
 
-    Exclusion strips X: Valeurs de strips en X entre lesquelles l'ajustement interpole le zéro moyen.
-    Typiquement ce sont les strips sur lesquelles un signal est observé.
+    Exclusion strips X: Valeurs de strips en X entre lesquelles l'ajustement interpole le zéro 
+    moyen. Typiquement ce sont les strips sur lesquelles un signal est observé.
 
     Exclusion strips Y: Pareil que "Exclusion strips X" mais pour Y.
 
-    Calibrate data: Paramètre de calibrage utilisé, peut-être des données (prédéfinies ou 'multiple' suivi 
-    des valeurs), une valeur, ou rien ('nothing').
+    Calibrate data: Paramètre de calibrage utilisé, peut être des données (prédéfinies ou 
+    'multiple' suivi des valeurs), une valeur, ou rien ('nothing').
 
-    Particle energy: Energie(s) des particules, peut être une série de valeurs ('multiple' suivi des valeurs), 
-    une valeur, ou rien ('nothing'), cette donnée est utilisée en cas d'absence de valeur de calibrage.
+    Particle energy: Energie(s) des particules, peut être une série de valeurs ('multiple' suivi
+    des valeurs), une valeur, ou rien ('nothing'), cette donnée est utilisée en cas d'absence de
+    valeur de calibrage.
 
-    Time sampling (s): Pas en temps en seconde sur lequel est fait le calcul de l'évolution du centre et 
-    de la dispersion spatiale du faisceau.
+    Time sampling (s): Pas en temps en seconde sur lequel est fait le calcul de l'évolution du
+    centre et de la dispersion spatiale du faisceau.
 
-    Acquisition time for electronic offset (s): Intégrale de temps sur laquelle est fait le calcul des offset 
-    électroniques, cf "Background extraction".
+    Acquisition time for electronic offset (s): Intégrale de temps sur laquelle est fait le calcul
+    des offset électroniques, cf "Background extraction".
     
     Integration steps: Nombre de trames intégrées pour la représentation de la charge totale.
 
-    Gaussian to fit: Nombre de fonctions gaussiennes utilisées pour l'ajustement du signal en X et Y, 
-    valeurs possibles 1 ou 2.
+    Gaussian to fit: Nombre de fonctions gaussiennes utilisées pour l'ajustement du signal en X et
+    Y, valeurs possibles 1 ou 2.
 
-    Smoothing: Utilise des valeurs pré-calculées pour chaque Dosion afin de lisser la réponse des pistes.
+    Smoothing: Utilise des valeurs pré-calculées pour chaque Dosion afin de lisser la réponse des
+    pistes.
 
     Chamber value (Gy): La valeur donnée par une éventuelle chambre placée sous le faisceau.
 
-L'ordre dans le fichier d'entrée n'a pas d'importance. Il n'est pas non plus obligatoire de mettre toutes les
-lignes, dans le cas contraire, la valeur par défaut utilisée sera de 0.
+L'ordre dans le fichier d'entrée n'a pas d'importance. Il n'est pas non plus obligatoire de mettre
+toutes les lignes, dans le cas contraire, la valeur par défaut utilisée sera de 0.
