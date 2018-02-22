@@ -64,7 +64,8 @@ Le fichier de paramètres d'entrée se compose de la sorte
         derivative  - discrimination sur la dérivée de la charge avec la valeur seuil "Threshold".
 
         quanta      - discrimination sur la valeur des quanta avec la valeur seuil "Threshold".
-        Méthode utile et efficace mais possible uniquement si des données de scaler sont présentes.
+        Méthode utile et efficace mais possible uniquement si des données de scaler sont
+        présentes.
 
         manual      - méthode manuelle pour définir la plage unique d'irradiation par 
         l'intermédiaire des valeurs "Boundaries" fournies en seconde.
