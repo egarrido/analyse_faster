@@ -1,16 +1,16 @@
-File: Calibration_6_0001.fast
-Path for the file: /home/garrido/Dosion/CPO/05_2017/
+File: C_10000_position_pt_3_0001.fast
+Path for the file: Cyrce/04_2017/
 Background extraction (yes/no sub/function/default): yes
-Irradiation area finding way (charge/derivative/quanta/manual): quanta
+Irradiation area finding way (charge/derivative/quanta/manual): derivative
 Boundaries (s): 21. 125.
-Threshold: 50.
+Threshold: 500.
 Exclusion strips X: 19 20
 Exclusion strips Y: 19 20 
-Calibrate data: proton_Arronax_68_MeV
-Particle energy: 100.
-Time sampling (s): 10000.
+Calibrate data: file Entry/Calib_cyrce.txt
+Particle energy: file Entry/Energy_cyrce.txt
+Time sampling (s): 1000.
 Acquisition time for electronic offset (s): 20.
 Integration steps: 50
-Gaussian to fit: 2
+Gaussian to fit: 1
 Smoothing: yes
-Charge divider: 1
+Chamber value (Gy): 1

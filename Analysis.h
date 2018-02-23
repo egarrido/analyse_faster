@@ -46,8 +46,8 @@
 #include "Seuil_data.h"
 #include "Calibrage_data.h"
 // #include "Label_Arronax.h"	// 11-12
-#include "Label_CPO.h"	// 1-2
-// #include "Label_Cyrce.h"	// 4-6
+// #include "Label_CPO.h"	// 1-2
+#include "Label_Cyrce.h"	// 4-6
 
 std::ofstream logfile;
 const bool logfileprint=true;
@@ -109,6 +109,7 @@ int ind_cal;
 double multiple_energy[25];
 double multiple_calib_th[25];
 double multiple_calib[25];
+double area_calib[25];
 double calib_entry=0.;
 double external_dose=0.;
 

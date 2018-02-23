@@ -80,12 +80,12 @@ Le fichier de paramètres d'entrée se compose de la sorte
 
     Exclusion strips Y: Pareil que "Exclusion strips X" mais pour Y.
 
-    Calibrate data: Paramètre de calibrage utilisé, peut être des données (prédéfinies ou 
-    'multiple' suivi des valeurs), une valeur, ou rien ('nothing').
+    Calibrate data: Paramètre de calibrage utilisé, peut être des données (prédéfinies, 'file'
+    suivi du chemin vers le fichier, 'multiple' suivi des valeurs), une valeur, rien ('nothing').
 
-    Particle energy: Energie(s) des particules, peut être une série de valeurs ('multiple' suivi
-    des valeurs), une valeur, ou rien ('nothing'), cette donnée est utilisée en cas d'absence de
-    valeur de calibrage.
+    Particle energy: Energie(s) des particules, peut être une série de valeurs ('file' suivi du
+    chemin vers le fichier, multiple' suivi des valeurs), une valeur, rien ('nothing'),
+    cette donnée est utilisée en cas d'absence de valeur de calibrage.
 
     Time sampling (s): Pas en temps en seconde sur lequel est fait le calcul de l'évolution du
     centre et de la dispersion spatiale du faisceau.

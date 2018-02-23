@@ -146,7 +146,7 @@ void EntryParameters(int config_simu)
 								cout<<"No valid input data for calibration:"<<value<<endl;
 							else
 							{
-								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<" fC/part; new value: "<<value<<" fC/part"<<endl;
+								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<" fC/part.; new value: "<<value<<" fC/part."<<endl;
 								Value_init[ind_value]=value;
 								calibrage_used=1;
 							}
@@ -176,6 +176,29 @@ void EntryParameters(int config_simu)
 								}while(!ss2.eof()&&ind_cal<=25);
 								ss2.clear();
 								// ind_cal--;
+							}
+							if(!bufferofbuffer.compare("file"))
+							{
+								buffer=buffer.substr(found+1);
+								calibrage_used=5;
+								cout<<"Multiple calibration values for primary particles stored in file: "<<buffer<<endl;
+								ind_cal=0;
+								ifstream calib_file(buffer.c_str());
+								if(!calib_file)
+								{
+									cout<<"No calibration file"<<endl;
+									calibrage_used=0;
+								}
+								else
+								{
+									while(true)
+									{
+										calib_file>>multiple_calib[ind_cal];
+										ind_cal++;
+										if(calib_file.eof()) break;
+									}
+									calib_file.close();
+								}							
 							}
 						}
 					}
@@ -216,6 +239,31 @@ void EntryParameters(int config_simu)
 								}while(!ss2.eof()&&ind_en<=25);
 								ss2.clear();
 								// ind_en--;
+								Value_init[ind_value]=-1.;
+								energy=-1.;
+							}
+							if(!bufferofbuffer.compare("file"))
+							{
+								buffer=buffer.substr(found+1);
+								cout<<"Multiple energy values for primary particles stored in file: "<<buffer<<endl;
+								ind_en=0;
+								ifstream energy_file(buffer.c_str());
+								if(!energy_file)
+								{
+									cout<<"No energy file"<<endl;
+									Value_init[ind_value]=0;
+									energy=0;
+								}
+								else
+								{
+									while(true)
+									{
+										energy_file>>multiple_energy[ind_en];
+										ind_en++;
+										if(energy_file.eof()) break;
+									}
+									energy_file.close();
+								}							
 								Value_init[ind_value]=-1.;
 								energy=-1.;
 							}
@@ -335,6 +383,9 @@ void EntryParameters(int config_simu)
 	cout<<"=================================================="<<endl;
 	cout<<" Parameters for the initialisation; config: "<<config_simu<<endl;
 	cout<<"--------------------------------------------------"<<endl;
+
+	cout<<" Gap size: "<<gap_Dosion<<" mm"<<endl;
+
 	cout<<" File of data: "<<data_faster_file<<endl;
 
 	ivar=2;
@@ -357,18 +408,20 @@ void EntryParameters(int config_simu)
 	{
 		cout<<" Multiple calibration values: "<<ind_cal<<" values"<<endl;
 		for(int ii=0;ii<ind_cal;ii++)
-			cout<<" "<<multiple_calib[ii]<<" fC/part;";
-		cout<<endl;
+			cout<<" "<<multiple_calib[ii]<<" fC/part."<<endl;
 	}	
-	if(calibrage_used==0&&energy==0)
-		cout<<" No calibration value"<<endl;
-	if(calibrage_used==0&&energy!=0)
+	if(calibrage_used==0&&energy>0.)
 	{
 		cout<<" Calibration from energy used"<<endl;
 		calibrage_used=6;
 	}
+	if(calibrage_used==0&&energy<0.)
+	{
+		cout<<" Calibration from energies used"<<endl;
+		calibrage_used=6;
+	}
 	if(calibrage_used==1)
-		cout<<" Calibration value: "<<Value_init[ivar]<<" fC/part"<<endl;
+		cout<<" Calibration value: "<<Value_init[ivar]<<" fC/part."<<endl;
 	if(calibrage_used==2)
 		cout<<" Cyrce calibration values used"<<endl;
 	if(calibrage_used==3)
@@ -382,8 +435,7 @@ void EntryParameters(int config_simu)
 	{
 		cout<<" Multiple energies for primary particles: "<<ind_en<<" values"<<endl;
 		for(int ii=0;ii<ind_en;ii++)
-			cout<<" "<<multiple_energy[ii]<<" MeV;";
-		cout<<endl;
+			cout<<" "<<multiple_energy[ii]<<" MeV"<<endl;
 	}	
 	if(Value_init[ivar]==0.)
 		cout<<" No energy for the primary particles"<<endl;
@@ -395,8 +447,11 @@ void EntryParameters(int config_simu)
 		cout<<" Be aware that the numbers of calibration and energy values are different"<<endl;
 		dosedistribution=false;
 	}
-	if(energy==0.&&calibrage_used==0)
+	if(calibrage_used==0&&energy==0)
+	{
+		cout<<" No calibration value"<<endl;
 		dosedistribution=false;
+	}
 
 	ivar=4;
 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -453,6 +508,9 @@ void EntryParameters(int config_simu)
 		logfile<<"=================================================="<<endl;
 		logfile<<" Parameters for the initialisation; config: "<<config_simu<<endl;
 		logfile<<"--------------------------------------------------"<<endl;
+	
+		logfile<<" Gap size: "<<gap_Dosion<<" mm"<<endl;
+		
 		logfile<<" File of data: "<<data_faster_file<<endl;
 
 		ivar=2;
@@ -474,15 +532,16 @@ void EntryParameters(int config_simu)
 		{
 			logfile<<" Multiple calibration values: "<<ind_cal<<" values"<<endl;
 			for(int ii=0;ii<ind_cal;ii++)
-				logfile<<" "<<multiple_calib[ii]<<" fC/part;";
-			logfile<<endl;
+				logfile<<" "<<multiple_calib[ii]<<" fC/part."<<endl;
 		}	
 		if(calibrage_used==0&&energy==0)
 			logfile<<" No calibration value"<<endl;
-		if(calibrage_used==0&&energy!=0)
+		if(calibrage_used==0&&energy>0.)
 			logfile<<" Calibration from energy used"<<endl;
+		if(calibrage_used==0&&energy<0.)
+			logfile<<" Calibration from energies used"<<endl;
 		if(calibrage_used==1)
-			logfile<<" Calibration value: "<<Value_init[ivar]<<" fC/part"<<endl;
+			logfile<<" Calibration value: "<<Value_init[ivar]<<" fC/part."<<endl;
 		if(calibrage_used==2)
 			logfile<<" Cyrce calibration values used"<<endl;
 		if(calibrage_used==3)
@@ -495,8 +554,7 @@ void EntryParameters(int config_simu)
 		{
 			logfile<<" Multiple energies for primary particles: "<<ind_en<<" values"<<endl;
 			for(int ii=0;ii<ind_en;ii++)
-				logfile<<" "<<multiple_energy[ii]<<" MeV;";
-			logfile<<endl;
+				logfile<<" "<<multiple_energy[ii]<<" MeV"<<endl;
 		}
 		if(Value_init[ivar]==0)
 			logfile<<" No energy for the primary particles"<<endl;
@@ -639,55 +697,55 @@ double Loss_value(double e_part,double density)
 	return e_loss;
 }
 
-double Calib_value(int area,int in_area,double e_part)
+void Calib_value(int area)
 {
+	int indice;
 	double calib_polynome;
-	if(in_area!=0)
-		return 0.;
-
-	if(calibrage_used==0)
-		return 0.;
-		
-	if(calibrage_used==1)
-		return calib_entry; 
-
-	if(calibrage_used==2)
-	{
-		if(e_part==0.)
-			return 1000./data_calib[area];
-		else
-		{
-			calib_polynome=data_par[0]+data_par[1]*e_part+data_par[2]*pow(e_part,2)+data_par[3]*pow(e_part,3);
-			return 1000./calib_polynome;
-		}
-	}
-
-	if(calibrage_used==3)
-		return 0.028431749; //68 MeV p+ Arronax
-
-	if(calibrage_used==4)
-		return 0.028431749; //68 MeV p+ Arronax
 
 	if(calibrage_used==5)
 	{
-		int indice=area%ind_cal;
-		return multiple_calib[area];
+		if(area>=ind_cal)
+			cout<<"/!\\ Attention, il y a plus de zones d'irradiation que de valeurs de calibrage /!\\"<<endl;
 	}
-	
-	if(calibrage_used==6)
+
+	for(int i=0;i<area;i++)
 	{
-		int indice=area%ind_en;
-		return multiple_calib_th[area];
+		area_calib[i]=0.;
+
+		if(calibrage_used==0)
+			area_calib[i]=0.;
+			
+		if(calibrage_used==1)
+			area_calib[i]=calib_entry; 
+
+		if(calibrage_used==2)
+		{
+			if(energy==0.)
+				area_calib[i]=1000./data_calib[area];
+			else
+			{
+				calib_polynome=data_par[0]+data_par[1]*energy+data_par[2]*pow(energy,2)+data_par[3]*pow(energy,3);
+				area_calib[i]=1000./calib_polynome;
+			}
+		}
+
+		if(calibrage_used==3)
+			area_calib[i]=0.028431749; //68 MeV p+ Arronax
+
+		if(calibrage_used==4)
+			area_calib[i]=0.028431749; //68 MeV p+ Arronax
+
+		if(calibrage_used==5)
+		{
+			indice=i%ind_cal;
+			area_calib[i]=multiple_calib[indice];
+		}
 	}
-
-	if(calibrage_used==-1)
-		return Loss_value(energy,1.2e-3)/W_air*q*1.E15;
-
 	// return .01875; //120 MeV
 	// return .01532; //160 MeV
 	// return .01339; //196 MeV
 	// return .01322; //200 MeV
-	// return Loss_value(e_part,1.2e-3)/W_air*q*1.E15;
+	// return Loss_value(energy,1.2e-3)/W_air*q*1.E15;
 }
 
 void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
@@ -2356,13 +2414,15 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 
 void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 {
+	if(energy<0.)
+		energy=multiple_energy[0];
 	int count_dose=0;
 	double dose_max;
 	double mean_dose=0.;
 	double rms_dose=0.;
-	double calib=Calib_value(0,0,energy)*pow(strip_width,2)/1000.;
+	double calib=area_calib[0];
 	double TEL=TEL_value(1,energy);
-	double pC_to_Gy=TEL/calib*q*1.E10;
+	double pC_to_Gy=TEL/(calib*pow(strip_width,2)/1000.)*q*1.E10;
 
 	// ***********************************************
 	// TEL=keV.um-1=1000.eV.1E-6.m-1=1E9.eV.m-1
@@ -2481,7 +2541,7 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	text_tmp.Form("Energie : %2.2lf MeV",energy);
 	Texte->DrawText(xt,yt,text_tmp);
 	yt-=ydecal;
-	text_tmp.Form("Calibrage : %3.3E fC/part.",Calib_value(0,0,energy));
+	text_tmp.Form("Calibrage : %3.3E fC/part.",calib);
 	Texte->DrawText(xt,yt,text_tmp);
 	yt-=ydecal;
 	text_tmp.Form("TEL : %3.3E keV/um",TEL);
@@ -2647,48 +2707,26 @@ int main(int argc, char** argv)
 
 	EntryParameters(config_simu);
 
-	if(energy>0.)
+	if(calibrage_used==6&&energy>0.)
 	{
 		calib_energy=Loss_value(energy,1.2e-3)/W_air*q*1.E15;
-		if(calibrage_used==1)
-		{
-			cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
-			cout<<"Valeur de calibrage donnée : "<<calib_entry<<" fC/part."<<endl;
-			if(logfileprint==true)
-			{
-				logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
-				logfile<<"Valeur de calibrage donnée : "<<calib_entry<<" fC/part."<<endl;
-			}
-		}
-		else
-		{
-			cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
-			if(logfileprint==true)
-				logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
-		}
+		cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+		if(logfileprint==true)
+			logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+		calib_entry=calib_energy;
+		calibrage_used=1;
 	}
-	if(energy<1.)
+	if(calibrage_used==6&&energy<0.)
 	{
 		for(int i=0;i<ind_en;i++)
 		{
 			multiple_calib_th[i]=Loss_value(multiple_energy[i],1.2e-3)/W_air*q*1.E15;
-			if(calibrage_used==5&&ind_cal==ind_en)
-			{
-				cout<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
-				cout<<"Valeur de calibrage donnée : "<<multiple_calib[i]<<" fC/part."<<endl;
-				if(logfileprint==true)
-				{
-					logfile<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
-					logfile<<"Valeur de calibrage donnée : "<<multiple_calib[i]<<" fC/part."<<endl;
-				}
-			}
-			else
-			{
-				cout<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
-				if(logfileprint==true)
-					logfile<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
-			}
+			cout<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+			if(logfileprint==true)
+				logfile<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+			multiple_calib[i]=multiple_calib_th[i];
 		}
+		calibrage_used=5;
 	}
 
 	strcpy(filename,data_faster_file.c_str());
@@ -2742,14 +2780,17 @@ int main(int argc, char** argv)
 		cout<<"Nombre d'irradiation supérieur à la limite"<<endl;
 		tot_area=MAX_SMPL;
 	}
+
 	cout<<tot_area<<" période(s) d'irradiation"<<endl;
+	Calib_value(tot_area);
+	
 	for(int i=0;i<tot_area;i++)
 	{
-		cout<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<endl;
+		cout<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<"; calibrage : "<<area_calib[i]<<" fC/part."<<endl;
 		if(logfileprint==true)
-			logfile<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<endl;
+			logfile<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<"; calibrage : "<<area_calib[i]<<" fC/part."<<endl;
 	}
-
+	
 	nbSummedSample=0;
 	count_area=0;
 	t0=-1; 
@@ -2792,6 +2833,11 @@ int main(int argc, char** argv)
 				in_area=0;
 			if(in_area==0&&fasterTime>signal_time[count_area][1])
 				in_area=1;
+	
+			calib_factor=area_calib[count_area]*pow(strip_width,2)/1000.;
+			if(calib_factor!=0.)
+				calib_factor=1./calib_factor;
+			// calib_factor=1.;
 
 			mid_signal=signal_time[count_area][0]+(signal_time[count_area][1]-signal_time[count_area][0])/2.;
 			if(count_area>=tot_area)
@@ -2939,7 +2985,7 @@ int main(int argc, char** argv)
 				else
 					vect_charge_cumul[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.;
 
-				calib_factor=Calib_value(count_area,in_area,energy)*pow(strip_width,2)/1000.;
+				calib_factor=area_calib[count_area]*pow(strip_width,2)/1000.;
 				if(calib_factor!=0.)
 					calib_factor=1./calib_factor;
 				// calib_factor=1.;
@@ -3627,7 +3673,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if(dosedistribution||calibrage_used!=-1.)
+	if(dosedistribution||calibrage_used!=0)
 		DoseDistribution(0,Map);
 
 	TCanvas *cMap= new TCanvas("Dose map");
