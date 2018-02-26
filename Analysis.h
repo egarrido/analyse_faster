@@ -91,6 +91,7 @@ bool dosedistribution=true;
 int bkgnd_param=0;
 int Gausstofit=1;
 int calibrage_used=0;
+int energy_used=0;
 int area_find_param=0;
 int lissage_param=0;
 int Strip_label;
@@ -110,6 +111,7 @@ double multiple_energy[25];
 double multiple_calib_th[25];
 double multiple_calib[25];
 double area_calib[25];
+double area_energy[25];
 double calib_entry=0.;
 double external_dose=0.;
 

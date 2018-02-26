@@ -1,9 +1,9 @@
-File: C_10000_position_pt_3_0001.fast
+File: C_10000_position_pt_1_0001.fast
 Path for the file: Cyrce/04_2017/
 Background extraction (yes/no sub/function/default): yes
-Irradiation area finding way (charge/derivative/quanta/manual): derivative
+Irradiation area finding way (charge/derivative/quanta/manual): charge
 Boundaries (s): 21. 125.
-Threshold: 500.
+Threshold: 40400.
 Exclusion strips X: 19 20
 Exclusion strips Y: 19 20 
 Calibrate data: file Entry/Calib_cyrce.txt

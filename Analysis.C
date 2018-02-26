@@ -65,6 +65,9 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	15
 
 	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
+
 	ifstream pathfile_param(pathname.c_str());
 	if(!pathfile_param)
 	{
@@ -170,17 +173,19 @@ void EntryParameters(int config_simu)
 								buffer=buffer.substr(found+1);
 								ss2<<buffer;
 								ind_cal=0;
-								do{
+								do
+								{
 									ss2>>multiple_calib[ind_cal];
 									ind_cal++;
 								}while(!ss2.eof()&&ind_cal<=25);
 								ss2.clear();
 								// ind_cal--;
+								if(ind_cal>0)							
+									calibrage_used=5;
 							}
 							if(!bufferofbuffer.compare("file"))
 							{
 								buffer=buffer.substr(found+1);
-								calibrage_used=5;
 								cout<<"Multiple calibration values for primary particles stored in file: "<<buffer<<endl;
 								ind_cal=0;
 								ifstream calib_file(buffer.c_str());
@@ -195,34 +200,32 @@ void EntryParameters(int config_simu)
 									{
 										calib_file>>multiple_calib[ind_cal];
 										ind_cal++;
-										if(calib_file.eof()) break;
+										if(calib_file.eof()||ind_cal>25) break;
 									}
 									calib_file.close();
-								}							
+									if(ind_cal>0)							
+										calibrage_used=5;
+								}
 							}
 						}
 					}
 					if(ind_value==8)
 					{
-						energy=0.;
+						energy_used=0.;
 						if(CheckDouble(buffer)==1)
 						{
 							value=(double)atof(buffer.c_str());
 							if(value<=0.)
-							{
 								cout<<"No valid input data for primary particles energy:"<<value<<endl;
-								Value_init[ind_value]=0.;
-							}
 							else
 							{
 								cout<<Variable_init[ind_value]<<" default value: "<<Value_init[ind_value]<<" MeV; new value: "<<value<<" MeV"<<endl;
-								Value_init[ind_value]=value;
 								energy=value;
+								energy_used=1;
 							}
 						}
 						else
 						{
-							Value_init[ind_value]=0.;
 							std::size_t found=buffer.find_first_of(' ');
 							std::string bufferofbuffer=buffer.substr(0,found);
 							if(!bufferofbuffer.compare("nothing"))
@@ -233,14 +236,15 @@ void EntryParameters(int config_simu)
 								buffer=buffer.substr(found+1);
 								ss2<<buffer;
 								ind_en=0;
-								do{
+								do
+								{
 									ss2>>multiple_energy[ind_en];
 									ind_en++;
 								}while(!ss2.eof()&&ind_en<=25);
 								ss2.clear();
 								// ind_en--;
-								Value_init[ind_value]=-1.;
-								energy=-1.;
+								if(ind_en>0)
+									energy_used=2;
 							}
 							if(!bufferofbuffer.compare("file"))
 							{
@@ -251,8 +255,7 @@ void EntryParameters(int config_simu)
 								if(!energy_file)
 								{
 									cout<<"No energy file"<<endl;
-									Value_init[ind_value]=0;
-									energy=0;
+									energy_used=0;
 								}
 								else
 								{
@@ -260,12 +263,12 @@ void EntryParameters(int config_simu)
 									{
 										energy_file>>multiple_energy[ind_en];
 										ind_en++;
-										if(energy_file.eof()) break;
+										if(energy_file.eof()||ind_en>25) break;
 									}
 									energy_file.close();
+									if(ind_en>0)
+										energy_used=2;
 								}							
-								Value_init[ind_value]=-1.;
-								energy=-1.;
 							}
 						}
 					}
@@ -404,53 +407,63 @@ void EntryParameters(int config_simu)
 	bkgnd_param=Value_init[ivar];
 	
 	ivar=3;
+	dosedistribution=true;
 	if(calibrage_used==5)
 	{
 		cout<<" Multiple calibration values: "<<ind_cal<<" values"<<endl;
 		for(int ii=0;ii<ind_cal;ii++)
-			cout<<" "<<multiple_calib[ii]<<" fC/part."<<endl;
+			cout<<" "<<setprecision(5)<<fixed<<multiple_calib[ii]<<" fC/part."<<endl;
 	}	
-	if(calibrage_used==0&&energy>0.)
+	if(calibrage_used==0&&energy_used==0)
+	{
+		cout<<" No calibration and energy values"<<endl;
+		dosedistribution=false;
+	}
+	if(calibrage_used==0&&energy_used==1)
 	{
 		cout<<" Calibration from energy used"<<endl;
 		calibrage_used=6;
 	}
-	if(calibrage_used==0&&energy<0.)
+	if(calibrage_used==0&&energy_used==2)
 	{
 		cout<<" Calibration from energies used"<<endl;
 		calibrage_used=6;
 	}
+	calib_entry=Value_init[ivar];
 	if(calibrage_used==1)
-		cout<<" Calibration value: "<<Value_init[ivar]<<" fC/part."<<endl;
+		cout<<" Calibration value: "<<setprecision(5)<<fixed<<calib_entry<<" fC/part."<<endl;
 	if(calibrage_used==2)
 		cout<<" Cyrce calibration values used"<<endl;
 	if(calibrage_used==3)
 		cout<<" Arronax calibration values used"<<endl;
 	if(calibrage_used==4)
 		cout<<" Arronax calibration value used for 68 MeV protons"<<endl;
-	calib_entry=Value_init[ivar];
 
 	ivar=8;
-	if(Value_init[ivar]<0.)
+	if(energy_used==2)
 	{
 		cout<<" Multiple energies for primary particles: "<<ind_en<<" values"<<endl;
 		for(int ii=0;ii<ind_en;ii++)
-			cout<<" "<<multiple_energy[ii]<<" MeV"<<endl;
+			cout<<" "<<setprecision(2)<<fixed<<multiple_energy[ii]<<" MeV"<<endl;
 	}	
-	if(Value_init[ivar]==0.)
+	if(energy_used==0.)
+	{
 		cout<<" No energy for the primary particles"<<endl;
-	if(Value_init[ivar]>0.)
-		cout<<" Energy of the particles: "<<energy<<endl;
+		dosedistribution=false;
+	}
+	if(energy_used==1)
+		cout<<" Energy of the particles: "<<setprecision(2)<<fixed<<energy<<endl;
 
 	if(ind_en!=ind_cal)
 	{
 		cout<<" Be aware that the numbers of calibration and energy values are different"<<endl;
-		dosedistribution=false;
-	}
-	if(calibrage_used==0&&energy==0)
-	{
-		cout<<" No calibration value"<<endl;
-		dosedistribution=false;
+		if(ind_cal>ind_en)
+			dosedistribution=false;
+		else
+		{
+			cout<<" Calibration values complete with energie values"<<endl;
+			calibrage_used=7;
+		}
 	}
 
 	ivar=4;
@@ -532,16 +545,16 @@ void EntryParameters(int config_simu)
 		{
 			logfile<<" Multiple calibration values: "<<ind_cal<<" values"<<endl;
 			for(int ii=0;ii<ind_cal;ii++)
-				logfile<<" "<<multiple_calib[ii]<<" fC/part."<<endl;
+				logfile<<" "<<setprecision(5)<<fixed<<multiple_calib[ii]<<" fC/part."<<endl;
 		}	
-		if(calibrage_used==0&&energy==0)
+		if(calibrage_used==0&&energy_used==0)
 			logfile<<" No calibration value"<<endl;
-		if(calibrage_used==0&&energy>0.)
+		if(calibrage_used==0&&energy_used==1)
 			logfile<<" Calibration from energy used"<<endl;
-		if(calibrage_used==0&&energy<0.)
+		if(calibrage_used==0&&energy_used==2)
 			logfile<<" Calibration from energies used"<<endl;
 		if(calibrage_used==1)
-			logfile<<" Calibration value: "<<Value_init[ivar]<<" fC/part."<<endl;
+			logfile<<" Calibration value: "<<setprecision(5)<<fixed<<calib_entry<<" fC/part."<<endl;
 		if(calibrage_used==2)
 			logfile<<" Cyrce calibration values used"<<endl;
 		if(calibrage_used==3)
@@ -554,15 +567,19 @@ void EntryParameters(int config_simu)
 		{
 			logfile<<" Multiple energies for primary particles: "<<ind_en<<" values"<<endl;
 			for(int ii=0;ii<ind_en;ii++)
-				logfile<<" "<<multiple_energy[ii]<<" MeV"<<endl;
+				logfile<<" "<<setprecision(2)<<fixed<<multiple_energy[ii]<<" MeV"<<endl;
 		}
 		if(Value_init[ivar]==0)
 			logfile<<" No energy for the primary particles"<<endl;
 		if(Value_init[ivar]>0.)
-			logfile<<" Energy of the particles: "<<Value_init[ivar]<<endl;
+			logfile<<" Energy of the particles: "<<setprecision(2)<<fixed<<energy<<endl;
 
 		if(ind_en!=ind_cal)
+		{
 			logfile<<" Be aware that the numbers of calibration and energy values are different"<<endl;
+			if(ind_cal<ind_en)
+				logfile<<" Calibration values complete with energie values"<<endl;
+		}
 
 		ivar=4;
 		logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -704,7 +721,7 @@ void Calib_value(int area)
 
 	if(calibrage_used==5)
 	{
-		if(area>=ind_cal)
+		if(area>ind_cal)
 			cout<<"/!\\ Attention, il y a plus de zones d'irradiation que de valeurs de calibrage /!\\"<<endl;
 	}
 
@@ -720,11 +737,11 @@ void Calib_value(int area)
 
 		if(calibrage_used==2)
 		{
-			if(energy==0.)
+			if(energy_used==0)
 				area_calib[i]=1000./data_calib[area];
 			else
 			{
-				calib_polynome=data_par[0]+data_par[1]*energy+data_par[2]*pow(energy,2)+data_par[3]*pow(energy,3);
+				calib_polynome=data_par[0]+data_par[1]*area_energy[i]+data_par[2]*pow(area_energy[i],2)+data_par[3]*pow(area_energy[i],3);
 				area_calib[i]=1000./calib_polynome;
 			}
 		}
@@ -847,6 +864,9 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 		TG_Quanta->Draw("AL");
 
 		cQuanta->SaveAs("Picture/Quanta.png");
+		cout<<endl;
+		if(logfileprint==true)
+			logfile<<endl;
 
 		TG_Quanta->Delete();
 		TG_dQuanta->Delete();
@@ -1216,6 +1236,9 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	hEOffYZ->GetYaxis()->SetRangeUser(hEOffYZ->GetBinContent(hEOffYZ->GetMinimumBin())/1.01,hEOffYZ->GetBinContent(hEOffYZ->GetMaximumBin())*1.01);
 	hEOffYZ->Draw("b");
 	cEOff->SaveAs("Picture/Offset_electronique.png");
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
 
 	hEOffX->Delete();
 	hEOffY->Delete();
@@ -1588,6 +1611,9 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	line->DrawLine(0.,-seuilD,max_time,-seuilD);
 
 	cCharge->SaveAs("Picture/Charge.png");
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
 
 	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
 
@@ -1816,6 +1842,9 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_dCharge->Draw("AL");
 
 	cCharge->SaveAs("Picture/Charge.png");
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
 
 	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
 
@@ -2088,6 +2117,9 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	line->DrawLine(vect_time_q[0],seuilQ,vect_time_q[count_quanta-1],seuilQ);
 
 	cCharge->SaveAs("Picture/Charge.png");
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
 
 	ElectronicOffsetExtraction(file,first_signal,last_signal,vect_time[0],vect_time[count_tot],beg_on,end_on);
 
@@ -2246,6 +2278,9 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->Draw("AL");
 
 	cCharge->SaveAs("Picture/Charge.png");
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
 
 	first_signal=bound_min;
 	last_signal=bound_max;
@@ -2412,17 +2447,12 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	TG_Visu->Delete();
 }
 
-void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
+double DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS],double Dose[N_STRIPS][N_STRIPS])
 {
-	if(energy<0.)
-		energy=multiple_energy[0];
-	int count_dose=0;
-	double dose_max;
-	double mean_dose=0.;
-	double rms_dose=0.;
-	double calib=area_calib[0];
-	double TEL=TEL_value(1,energy);
-	double pC_to_Gy=TEL/(calib*pow(strip_width,2)/1000.)*q*1.E10;
+	double energy_value=area_energy[nb_area];
+	double calibration_value=area_calib[nb_area];
+	double TEL=TEL_value(1,energy_value);
+	double pC_to_Gy=TEL/(calibration_value*pow(strip_width,2)/1000.)*q*1.E10;
 
 	// ***********************************************
 	// TEL=keV.um-1=1000.eV.1E-6.m-1=1E9.eV.m-1
@@ -2435,151 +2465,16 @@ void DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS])
 	// pC_to_Gy=1E13.[eV.m-3].pC-1. <=> 1E10.q.Gy.pC-1
 	// ***********************************************
 
-	double Dose[N_STRIPS][N_STRIPS];
-	// cout<<TEL<<" "<<calib<<endl;
-
-	TH2F* TH2_Dose=new TH2F("TH2_Dose","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
-	TH2F* TH2_Cont=new TH2F();
-
 	for(int i=0;i<N_STRIPS;i++)
 		for(int j=0;j<N_STRIPS;j++)
-		{
 			Dose[i][j]=Fluence[i][j]*pC_to_Gy;
-			// TH2_Dose->SetBinContent(i+1,j+1,Fluence[i][j]/calib);
-			TH2_Dose->SetBinContent(i+1,j+1,Dose[i][j]);
-		}
-	dose_max=TH2_Dose->GetBinContent(TH2_Dose->GetMaximumBin());
-	double contours[4];
-				 contours[0] = 0.*dose_max;
-				 contours[1] = 0.2*dose_max;
-				 contours[2] = 0.5*dose_max;
-				 contours[3] = 0.9*dose_max;
 
-	TH1F* Dose_dist=new TH1F("Dose_dist","Distribution de dose",25,dose_max*.1,dose_max*1.1);
-	for(int i=0;i<N_STRIPS;i++)
-		for(int j=0;j<N_STRIPS;j++)
-		{
-			if(Dose[i][j]>.9*dose_max)
-			{
-				mean_dose+=Dose[i][j];
-				rms_dose+=Dose[i][j]*Dose[i][j];
-				count_dose++;
-			}
-			Dose_dist->Fill(Dose[i][j]);
-		}
-	mean_dose/=count_dose;
-	rms_dose=sqrt(rms_dose/count_dose-(mean_dose*mean_dose));
-	
-	TCanvas *cDose= new TCanvas("Dose distribution");
-	cDose->SetCanvasSize(2100,700);
-	cDose->Divide(3,1);
-
-	cDose->cd(1);
-	TH2_Dose->SetTitle("");//Fluency map (particle/cm2)");
-	TH2_Dose->SetTitleSize(0.0);
-	TH2_Dose->SetStats(0);
-	TH2_Dose->GetXaxis()->SetTitle("Channel X");
-	TH2_Dose->GetXaxis()->SetNdivisions(N_STRIPS);
-	TH2_Dose->GetXaxis()->SetTickSize(0.01);
-	TH2_Dose->GetXaxis()->SetTitleSize(0.036);
-	TH2_Dose->GetXaxis()->CenterTitle();
-	TH2_Dose->GetXaxis()->SetLabelSize(0.02);
-	TH2_Dose->GetYaxis()->SetTitle("Channel Y");
-	TH2_Dose->GetYaxis()->SetNdivisions(N_STRIPS);
-	TH2_Dose->GetYaxis()->SetTickSize(0.01);
-	TH2_Dose->GetYaxis()->SetTitleSize(0.036);
-	TH2_Dose->GetYaxis()->CenterTitle();
-	TH2_Dose->GetYaxis()->SetLabelSize(0.02);
-	TH2_Dose->Draw("colz");
-
-	TH2_Cont=(TH2F*)TH2_Dose->Clone("TH2_Cont");
-	TH2_Cont->SetContour(4, contours);
-	TH2_Cont->SetLineColor(kWhite);
-	// TH2_Cont->SetLineWidth(1.8);
-	TH2_Cont->Draw("same cont3 list");
-
-	cDose->cd(2);
-	Dose_dist->SetTitle("");//Fluency map (particle/cm2)");
-	Dose_dist->SetTitleSize(0.0);
-	Dose_dist->SetStats(0);
-	Dose_dist->GetXaxis()->SetTitle("Dose (Gy)");
-	Dose_dist->GetXaxis()->SetTickSize(0.01);
-	Dose_dist->GetXaxis()->SetTitleSize(0.036);
-	Dose_dist->GetXaxis()->CenterTitle();
-	Dose_dist->GetXaxis()->SetLabelSize(0.02);
-	Dose_dist->GetYaxis()->SetTitle("Nombre pixels");
-	Dose_dist->GetYaxis()->SetTickSize(0.01);
-	Dose_dist->GetYaxis()->SetTitleSize(0.036);
-	Dose_dist->GetYaxis()->CenterTitle();
-	Dose_dist->GetYaxis()->SetLabelSize(0.02);
-	Dose_dist->Draw("colz");
-
-	cDose->cd(3);
-	double xt=.9;
-	double yt=.9;
-	double ydecal=.05;
-	TText* Texte=new TText();
-	TString text_tmp;
-	Texte->SetTextAlign(31);
-	Texte->SetTextFont(43);
-	Texte->SetTextSize(30);
-	Texte->SetTextColor(1);
-	text_tmp.Form("Irradiation %d",nb_area+1);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	yt-=ydecal;
-	if(calibrage_used==1||calibrage_used==2)
-	{
-		Texte->DrawText(xt,yt,"Particule : proton");
-		yt-=ydecal;
-	}
-	if(calibrage_used==3)
-	{
-		Texte->DrawText(xt,yt,"Particule : 68 MeV proton");
-		yt-=ydecal;
-	}
-	text_tmp.Form("Energie : %2.2lf MeV",energy);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	text_tmp.Form("Calibrage : %3.3E fC/part.",calib);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	text_tmp.Form("TEL : %3.3E keV/um",TEL);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	yt-=ydecal;
-	text_tmp.Form("Dose maximale %3.3E Gy",dose_max);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	Texte->DrawText(xt,yt,"Isodoses");
-	yt-=ydecal;
-	text_tmp.Form("90%% -- %3.3E Gy",contours[3]);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	text_tmp.Form("50%% -- %3.3E Gy",contours[2]);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	text_tmp.Form("20%% -- %3.3E Gy",contours[1]);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	yt-=ydecal;
-	text_tmp.Form("Dose moyenne 90%% %3.3E Gy +/- %2.2lf %%",mean_dose,rms_dose/mean_dose*100.);
-	Texte->DrawText(xt,yt,text_tmp);
-	yt-=ydecal;
-	cout<<"Dose moyenne dans les 90% de "<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
-	logfile<<"Dose moyenne dans les 90% de "<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
-
-	cDose->SaveAs("Picture/Dose_distribution.png");
-	
-	TH2_Dose->Delete();
-	TH2_Cont->Delete();
-	Dose_dist->Delete();
-	cDose->Destructor();
+	return TEL;	
 }
 
 int main(int argc, char** argv)
 {
-	cout.precision(8);
+	// cout.precision(5);
 	system("rm -f Picture/*.png");
 	system("rm -f Sampling/*.png Sampling/*.pdf Sampling/*.mp4");
 	// cout.setf(std::ios_base::fixed | std::ios_base::scientific, std::ios_base::floatfield);
@@ -2639,6 +2534,12 @@ int main(int argc, char** argv)
 	double rms_y;
 	double xt;
 	double yt;
+	double x1;
+	double x2;
+	double x3;
+	double y1;
+	double y2;
+	double y3;
 	double ydecal=.04;
 	double min;
 	double max;
@@ -2691,6 +2592,15 @@ int main(int argc, char** argv)
 	double signal_time[MAX_SMPL][2];
 	double Map[N_STRIPS][N_STRIPS];
 
+	int count_dose;
+	double dose_max;
+	double mean_dose;
+	double rms_dose;
+	double TEL;
+	double contours[4];
+	double Dose[N_STRIPS][N_STRIPS];
+	double Dose_tot[N_STRIPS][N_STRIPS];
+
 	double* vect_time_tot=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_time_int=(double*)malloc(MAX_INTEGR*sizeof(double));
 	double* vect_charge_clean=(double*)malloc(MAX_INTEGR*sizeof(double));
@@ -2707,23 +2617,23 @@ int main(int argc, char** argv)
 
 	EntryParameters(config_simu);
 
-	if(calibrage_used==6&&energy>0.)
+	if(calibrage_used==6&&energy_used==1)
 	{
 		calib_energy=Loss_value(energy,1.2e-3)/W_air*q*1.E15;
-		cout<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+		cout<<"Valeur théorique de calibrage à "<<setprecision(4)<<energy<<" MeV : "<<setprecision(6)<<calib_energy<<" fC/part."<<endl;
 		if(logfileprint==true)
-			logfile<<"Valeur théorique de calibrage à "<<energy<<" MeV : "<<calib_energy<<" fC/part."<<endl;
+			logfile<<"Valeur théorique de calibrage à "<<setprecision(4)<<energy<<" MeV : "<<setprecision(6)<<calib_energy<<" fC/part."<<endl;
 		calib_entry=calib_energy;
 		calibrage_used=1;
 	}
-	if(calibrage_used==6&&energy<0.)
+	if(calibrage_used==6&&energy_used==2)
 	{
 		for(int i=0;i<ind_en;i++)
 		{
 			multiple_calib_th[i]=Loss_value(multiple_energy[i],1.2e-3)/W_air*q*1.E15;
-			cout<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+			cout<<"Valeur théorique de calibrage à "<<setprecision(4)<<multiple_energy[i]<<" MeV : "<<setprecision(6)<<multiple_calib_th[i]<<" fC/part."<<endl;
 			if(logfileprint==true)
-				logfile<<"Valeur théorique de calibrage à "<<multiple_energy[i]<<" MeV : "<<multiple_calib_th[i]<<" fC/part."<<endl;
+				logfile<<"Valeur théorique de calibrage à "<<setprecision(4)<<multiple_energy[i]<<" MeV : "<<setprecision(6)<<multiple_calib_th[i]<<" fC/part."<<endl;
 			multiple_calib[i]=multiple_calib_th[i];
 		}
 		calibrage_used=5;
@@ -2753,6 +2663,8 @@ int main(int argc, char** argv)
 		ProfilY[j]=0;
 		lissage_factor[j][0]=1.;
 		lissage_factor[j][1]=1.;
+		for(int i=0;i<N_STRIPS;i++)
+			Dose_tot[i][j]=0.;
 	}
 	ChX->Reset();
 	ChY->Reset();
@@ -2777,20 +2689,52 @@ int main(int argc, char** argv)
 	
 	if(tot_area>MAX_SMPL)
 	{
-		cout<<"Nombre d'irradiation supérieur à la limite"<<endl;
+		cout<<"Nombre de signaux supérieur à la limite"<<endl;
 		tot_area=MAX_SMPL;
 	}
-
 	cout<<tot_area<<" période(s) d'irradiation"<<endl;
-	Calib_value(tot_area);
-	
+
+	if(energy_used==1)
+		for(int i=0;i<tot_area;i++)
+			area_energy[i]=energy;
+	if(energy_used==2&&dosedistribution==true)
+	{
+		int indice;
+		if(tot_area>ind_en)
+			cout<<"/!\\ Attention, il y a plus de zones d'irradiation que de valeurs d'énergies /!\\"<<endl;
+		for(int i=0;i<tot_area;i++)
+		{
+			if(i>ind_en)
+				indice=i%ind_en;
+			else
+				indice=i;
+			area_energy[i]=multiple_energy[indice];
+		}
+	}
+
+	if(calibrage_used==7)
+	{
+		for(int i=ind_cal;i<ind_en;i++)
+			multiple_calib[i]=Loss_value(multiple_energy[i],1.2e-3)/W_air*q*1.E15;
+		ind_cal=ind_en;
+		calibrage_used=5;
+	}
+
+	if(dosedistribution==true)
+		Calib_value(tot_area);
+
 	for(int i=0;i<tot_area;i++)
 	{
-		cout<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<"; calibrage : "<<area_calib[i]<<" fC/part."<<endl;
+		cout<<"Signal "<<std::setw(2)<<std::setfill('0')<<i+1<<"; début : "<<setprecision(2)<<fixed<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]
+		<<" s; énergie : "<<area_energy[i]<<" MeV; calibrage : "<<setprecision(5)<<fixed<<area_calib[i]<<" fC/part."<<endl;
 		if(logfileprint==true)
-			logfile<<"Irradiation "<<i+1<<"; début : "<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]<<"; calibrage : "<<area_calib[i]<<" fC/part."<<endl;
+			logfile<<"Signal "<<std::setw(2)<<std::setfill('0')<<i+1<<"; début : "<<setprecision(2)<<fixed<<signal_time[i][0]<<"; fin : "<<signal_time[i][1]<<"; durée : "<<signal_time[i][1]-signal_time[i][0]
+			<<" s; énergie : "<<area_energy[i]<<" MeV; calibrage : "<<setprecision(5)<<fixed<<area_calib[i]<<" fC/part."<<endl;
 	}
-	
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
+
 	nbSummedSample=0;
 	count_area=0;
 	t0=-1; 
@@ -3089,9 +3033,15 @@ int main(int argc, char** argv)
 					for(int k=0;k<N_STRIPS;k++)
 					{
 						if(sum_x>0.&&sum_y>0.)
+						{
+							Map[i][k]=AreaX->GetAt(i)*AreaY->GetAt(k)/(sum_x*sum_y)*(sum_x+sum_y)/2.;
 							TH2_Area->SetBinContent(i+1,k+1,AreaX->GetAt(i)*AreaY->GetAt(k)/(sum_x*sum_y)*(sum_x+sum_y)/2.);
-						else	
+						}
+						else
+						{	
+							Map[i][k]=0.;
 							TH2_Area->SetBinContent(i+1,k+1,0.);
+						}
 					}
 				if(sum_x>0.)
 				{
@@ -3120,10 +3070,34 @@ int main(int argc, char** argv)
 				vect_ampl_area[count_area]=TH2_Area->GetBinContent(TH2_Area->GetMaximumBin());
 
 				TCanvas *cArea= new TCanvas("Dose map");
-				cArea->SetCanvasSize(2000,2000);
-				cArea->Divide(2,2);
+				cArea->SetCanvasSize(3000,2000);
+				x1=.33;
+				y1=.49;
+				x2=.34;
+				y2=.50;
+				x3=.67;
+				TPad * pad1 = new TPad("pad1","pad1",0,0,x1,y1);
+				TPad * pad2 = new TPad("pad2","pad2",0,y2,x1,1);
+				TPad * pad3 = new TPad("pad3","pad3",x2,0,x3,y1);
+				TPad * pad4 = new TPad("pad4","pad4",x2,y2,x3,1);
+				TPad * pad5 = new TPad("pad5","pad5",x3,0,1,1);
+				pad1->SetTopMargin(0.1);
+				pad1->SetBottomMargin(0.1);
+				pad1->Draw();
+				pad2->SetTopMargin(0.1);
+				pad2->SetBottomMargin(0.1);
+				pad2->Draw();
+				pad3->SetTopMargin(0.1);
+				pad3->SetBottomMargin(0.1);
+				pad3->Draw();
+				pad4->SetTopMargin(0.1);
+				pad4->SetBottomMargin(0.1);
+				pad4->Draw();
+				pad5->SetTopMargin(0.1);
+				pad5->SetBottomMargin(0.1);
+				pad5->Draw();
 
-				cArea->cd(1);
+				pad2->cd();
 				TH2_Area->SetTitle("");//Fluency map (particle/cm2)");
 				TH2_Area->SetTitleSize(0.0);
 				TH2_Area->SetStats(0);
@@ -3141,7 +3115,7 @@ int main(int argc, char** argv)
 				TH2_Area->GetYaxis()->SetLabelSize(0.02);
 				TH2_Area->Draw("colz");
 
-				cArea->cd(3);
+				pad1->cd();
 				i_cx=ceil(mean_x);
 				ampl=Profil_x_area->GetBinContent(Profil_x_area->GetBin(i_cx));
 				// ampl=Profil_x_area->GetBinContent(Profil_x_area->GetMaximumBin());
@@ -3151,6 +3125,7 @@ int main(int argc, char** argv)
 				i_cy=TMath::Min(Profil_x_area->GetNbinsX()-2,Profil_x_area->GetMaximumBin()+bin_down);
 
 				Profil_x_area->SetTitle("");//Fluency map (particle/cm2)");
+				Profil_x_area->SetLineWidth(2);
 				Profil_x_area->SetTitleSize(0.0);
 				Profil_x_area->SetStats(0);
 				Profil_x_area->GetXaxis()->SetTitle("Channel X");
@@ -3197,7 +3172,7 @@ int main(int argc, char** argv)
 				Gauss2ProfilX->Delete();
 				FWHM->Clear();
 
-				cArea->cd(4);
+				pad3->cd();
 				i_cy=ceil(mean_y);
 				ampl=Profil_y_area->GetBinContent(Profil_y_area->GetBin(i_cy));
 				// ampl=Profil_y_area->GetBinContent(Profil_y_area->GetMaximumBin());
@@ -3207,6 +3182,7 @@ int main(int argc, char** argv)
 				i_cy=TMath::Min(Profil_y_area->GetNbinsX()-1,Profil_y_area->GetMaximumBin()+bin_down);
 
 				Profil_y_area->SetTitle("");//Fluency map (particle/cm2)");
+				Profil_y_area->SetLineWidth(2);
 				Profil_y_area->SetTitleSize(0.0);
 				Profil_y_area->SetStats(0);
 				Profil_y_area->GetXaxis()->SetTitle("Channel Y");
@@ -3254,17 +3230,122 @@ int main(int argc, char** argv)
 				FWHM->Delete();
 				g2->Delete();
 
-				cArea->cd(2);
+				TH2F* TH2_Dose=new TH2F("TH2_Dose","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
+				TH2F* TH2_Cont=new TH2F();
+				TH1F* Dose_dist=new TH1F();
+
+				if(dosedistribution==true)
+				{
+					TEL=DoseDistribution(count_area,Map,Dose);
+
+					for(int i=0;i<N_STRIPS;i++)
+					{
+						for(int j=0;j<N_STRIPS;j++)
+						{
+							TH2_Dose->SetBinContent(i+1,j+1,Dose[i][j]);
+							Dose_tot[i][j]+=Dose[i][j];
+						}
+					}
+					dose_max=TH2_Dose->GetBinContent(TH2_Dose->GetMaximumBin());
+					contours[0] = 0.*dose_max;
+					contours[1] = 0.2*dose_max;
+					contours[2] = 0.5*dose_max;
+					contours[3] = 0.9*dose_max;
+
+					Dose_dist->SetName("Dose distribution");
+					Dose_dist->SetBins(25,dose_max*.1,dose_max*1.1);
+
+					count_dose=0;
+					mean_dose=0.;
+					rms_dose=0.;
+					for(int i=0;i<N_STRIPS;i++)
+					{
+						for(int j=0;j<N_STRIPS;j++)
+						{
+							if(Dose[i][j]>.9*dose_max)
+							{
+								mean_dose+=Dose[i][j];
+								rms_dose+=Dose[i][j]*Dose[i][j];
+								count_dose++;
+							}
+							Dose_dist->Fill(Dose[i][j]);
+						}
+					}
+					mean_dose/=count_dose;
+					rms_dose=sqrt(rms_dose/count_dose-(mean_dose*mean_dose));
+					
+					pad2->cd();
+					TH2_Dose->SetTitle("");//Fluency map (particle/cm2)");
+					TH2_Dose->SetTitleSize(0.0);
+					TH2_Dose->SetStats(0);
+					TH2_Dose->GetXaxis()->SetTitle("Channel X");
+					TH2_Dose->GetXaxis()->SetNdivisions(N_STRIPS);
+					TH2_Dose->GetXaxis()->SetTickSize(0.01);
+					TH2_Dose->GetXaxis()->SetTitleSize(0.036);
+					TH2_Dose->GetXaxis()->CenterTitle();
+					TH2_Dose->GetXaxis()->SetLabelSize(0.02);
+					TH2_Dose->GetYaxis()->SetTitle("Channel Y");
+					TH2_Dose->GetYaxis()->SetNdivisions(N_STRIPS);
+					TH2_Dose->GetYaxis()->SetTickSize(0.01);
+					TH2_Dose->GetYaxis()->SetTitleSize(0.036);
+					TH2_Dose->GetYaxis()->CenterTitle();
+					TH2_Dose->GetYaxis()->SetLabelSize(0.02);
+					TH2_Dose->Draw("colz");
+
+					TH2_Cont=(TH2F*)TH2_Dose->Clone("TH2_Cont");
+					TH2_Cont->SetContour(4, contours);
+					TH2_Cont->SetLineColor(kWhite);
+					// TH2_Cont->SetLineWidth(1.8);
+					TH2_Cont->Draw("same cont3 list");
+
+					pad4->cd();
+					Dose_dist->SetTitle("");//Fluency map (particle/cm2)");
+					Dose_dist->SetLineWidth(2);
+					Dose_dist->SetTitleSize(0.0);
+					Dose_dist->SetStats(0);
+					Dose_dist->GetXaxis()->SetTitle("Dose (Gy)");
+					Dose_dist->GetXaxis()->SetTickSize(0.01);
+					Dose_dist->GetXaxis()->SetTitleSize(0.036);
+					Dose_dist->GetXaxis()->CenterTitle();
+					Dose_dist->GetXaxis()->SetLabelSize(0.02);
+					Dose_dist->GetYaxis()->SetTitle("Nombre pixels");
+					Dose_dist->GetYaxis()->SetTickSize(0.01);
+					Dose_dist->GetYaxis()->SetTitleSize(0.036);
+					Dose_dist->GetYaxis()->CenterTitle();
+					Dose_dist->GetYaxis()->SetLabelSize(0.02);
+					Dose_dist->Draw();
+				}
+				
+				pad5->cd();
+				ydecal=.02;
 				xt=.9;
-				yt=.9;
+				yt=.95;
 				Texte->SetTextAlign(31);
 				Texte->SetTextFont(43);
 				Texte->SetTextSize(30);
 				Texte->SetTextColor(1);
-				text_tmp.Form("Irradiation %d",count_area+1);
+				text_tmp.Form("Signal %d",count_area+1);
 				Texte->DrawText(xt,yt,text_tmp);
 				yt-=ydecal;
 				yt-=ydecal;
+				if(calibrage_used!=0)
+				{
+					Texte->DrawText(xt,yt,"Particule : proton");
+					yt-=ydecal;
+					text_tmp.Form("Calibrage : %3.3E fC/part.",area_calib[count_area]);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+				}
+				if(energy_used!=0)
+				{	
+					text_tmp.Form("Energie : %2.2lf MeV",area_energy[count_area]);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					text_tmp.Form("TEL : %3.3E keV/um",TEL);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					yt-=ydecal;
+				}
 				text_tmp.Form("Debut : %2.2lf sec",signal_time[count_area][0]);
 				Texte->DrawText(xt,yt,text_tmp);
 				yt-=ydecal;
@@ -3314,6 +3395,32 @@ int main(int argc, char** argv)
 				text_tmp.Form("FWHM Y : %3.3lf (%3.3lf mm)",vect_fwhm_y_area[count_area],vect_fwhm_y_area[count_area]*sizeStrip*10.);
 				Texte->DrawText(xt,yt,text_tmp);
 				yt-=ydecal;
+				yt-=ydecal;
+
+				if(dosedistribution==true)
+				{
+					text_tmp.Form("Dose maximale %3.3E Gy",dose_max);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					Texte->DrawText(xt,yt,"Isodoses");
+					yt-=ydecal;
+					text_tmp.Form("90%% -- %3.3E Gy",contours[3]);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					text_tmp.Form("50%% -- %3.3E Gy",contours[2]);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					text_tmp.Form("20%% -- %3.3E Gy",contours[1]);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					yt-=ydecal;
+					text_tmp.Form("Dose moyenne 90%% %3.3E Gy +/- %2.2lf %%",mean_dose,rms_dose/mean_dose*100.);
+					Texte->DrawText(xt,yt,text_tmp);
+					yt-=ydecal;
+					cout<<"Signal "<<std::setw(2)<<std::setfill('0')<<count_area+1<<"; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
+					if(logfileprint==true)
+						logfile<<"Signal "<<std::setw(2)<<std::setfill('0')<<count_area+1<<"; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
+				}
 
 				name_area="Picture/Area_";
 				name_area+=(count_area+1);
@@ -3324,6 +3431,9 @@ int main(int argc, char** argv)
 				TH2_Area->Delete();
 				Profil_x_area->Delete();
 				Profil_y_area->Delete();
+				TH2_Dose->Delete();
+				TH2_Cont->Delete();
+				Dose_dist->Delete();
 				// FWHM->Delete();
 				cArea->Destructor();
 
@@ -3332,7 +3442,7 @@ int main(int argc, char** argv)
 				in_area=2;
 				count_area++;
 			}
-
+		
 			// if(integralTime>DBL_MAX)
 			if(integralTime>SamplingTime)
 			{
@@ -3343,10 +3453,10 @@ int main(int argc, char** argv)
 				{
 					TCanvas *cSmpl= new TCanvas("Dose map");
 					cSmpl->SetCanvasSize(1000,1000);
-					double x1=.23;
-					double x2=.23;
-					double y1=.78;
-					double y2=.78;
+					x1=.23;
+					x2=.23;
+					y1=.78;
+					y2=.78;
 					// TPad * pad1 = new TPad("pad1","pad1",0,0,x1,y1);
 					// TPad * pad2 = new TPad("pad2","pad2",0,y2,x1,1);
 					// TPad * pad3 = new TPad("pad3","pad3",x2,0,1,y1);
@@ -3514,16 +3624,33 @@ int main(int argc, char** argv)
 		system(Execution);
 	}
 
-	cout<<"Total of samples of "<<SamplingTime<<"(s) : "<<nbSummedSample<<endl;
+	cout<<endl;
+	cout<<"Nombre total d'échantillons de "<<setprecision(2)<<fixed<<SamplingTime<<" seconde(s) : "<<nbSummedSample<<endl;
+	cout<<endl;
+	if(logfileprint==true)
+	{
+		logfile<<endl;
+		logfile<<"Nombre total d'échantillons de"<<setprecision(2)<<fixed<<SamplingTime<<" seconde(s) : "<<nbSummedSample<<endl;
+		logfile<<endl;
+	}
+
 	for(int i=0;i<tot_area;i++)
 	{
-		cout<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
+		cout<<"Signal "<<std::setw(2)<<std::setfill('0')<<i+1<<" Mean X : "<<setprecision(2)<<fixed<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
 		<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Charge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 		if(logfileprint==true)
-			logfile<<"Signal "<<i+1<<" Mean X : "<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
+			logfile<<"Signal "<<std::setw(2)<<std::setfill('0')<<i+1<<" Mean X : "<<setprecision(2)<<fixed<<vect_mean_x_area[i]<<"; Mean Y : "<<vect_mean_y_area[i]
 			<<"; RMS X : "<<vect_rms_x_area[i]<<"; RMS Y : "<<vect_rms_y_area[i]<<"; Charge totale (pC) : "<<vect_charge_t_area[i]<<"; Amplitude (%) : "<<vect_charge_t_area[i]/chargeTot_pC*100.<<endl;
 	}
-	cout<<"Charge totale : "<<chargeTot_pC<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
+	cout<<endl;
+	cout<<"Charge totale : "<<setprecision(2)<<fixed<<chargeTot_pC<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
+	cout<<endl;
+	if(logfileprint==true)
+	{
+		logfile<<endl;
+		logfile<<"Charge totale : "<<setprecision(2)<<fixed<<chargeTot_pC<<" pC; charge signal X : "<<chargeTot_signal_X<<" pC; charge signal Y : "<<chargeTot_signal_Y<<" pC"<<endl;
+		logfile<<endl;
+	}
 
 	errrel<<"------------------------"<<endl;
 	errrel<<"Piste et charges totales"<<endl;
@@ -3534,8 +3661,11 @@ int main(int argc, char** argv)
 	errrel<<"------------------------"<<endl;
 
 	TH2F* TH2_Map=new TH2F("TH2_Map","Fluency map (particle/cm2)",N_STRIPS,1,33,N_STRIPS,1,33);
+	TH2F* TH2_Dose_tot=new TH2F("TH2_Dose_tot","Total dose",N_STRIPS,1,33,N_STRIPS,1,33);
 	TH1F* Profil_x=new TH1F("ProfX","X profile in number of particles",N_STRIPS,1,33);
 	TH1F* Profil_y=new TH1F("ProfY","Y profile in number of particles",N_STRIPS,1,33);
+	TH1F* Dose_dist_tot=new TH1F();
+	TH2F* TH2_Cont_tot=new TH2F();
 
 	TCanvas *cCCharge= new TCanvas("Charge over time");
 	cCCharge->SetCanvasSize(2000,2000);
@@ -3626,7 +3756,7 @@ int main(int argc, char** argv)
 	TGraph *TG_IntensInst=new TGraph(count_int,vect_time_int,vect_intensity_inst);
 	TG_IntensInst->SetMarkerColor(4);
 	TG_IntensInst->SetLineColor(4);
-	TG_IntensInst->SetLineWidth(1.5);
+	TG_IntensInst->SetLineWidth(2.);
 	TG_IntensInst->SetTitle("Intensity");
 	TG_IntensInst->GetXaxis()->SetTitle("Time (s)");
 	TG_IntensInst->GetXaxis()->SetTickSize(0.01);
@@ -3641,6 +3771,9 @@ int main(int argc, char** argv)
 	TG_IntensInst->Draw("AL");
 
 	cCCharge->SaveAs("Picture/Charge_clean.png");
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
 
 	TG_CCharge->Delete();
 	TG_CumulCharge->Delete();
@@ -3673,12 +3806,20 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if(dosedistribution||calibrage_used!=0)
-		DoseDistribution(0,Map);
+	// if(dosedistribution||calibrage_used!=0)
+	// 	DoseDistribution(0,Map);
 
 	TCanvas *cMap= new TCanvas("Dose map");
-	cMap->SetCanvasSize(2000,2000);
-	cMap->Divide(2,2);
+	if(dosedistribution==true)
+	{
+		cMap->SetCanvasSize(3000,2000);
+		cMap->Divide(3,2);
+	}
+	else
+	{
+		cMap->SetCanvasSize(2000,2000);
+		cMap->Divide(2,2);
+	}
 
 	cMap->cd(1);
 	TH2_Map->SetTitle("");//Fluency map (particle/cm2)");
@@ -3775,8 +3916,12 @@ int main(int argc, char** argv)
 	TG_Centers->Draw("P same");
 	free(matrix_fluence);
 
-	cMap->cd(3);
+	if(dosedistribution==true)
+		cMap->cd(4);
+	else	
+		cMap->cd(3);
 	Profil_x->SetTitle("");//Fluency map (particle/cm2)");
+	Profil_x->SetLineWidth(2.);
 	Profil_x->SetTitleSize(0.0);
 	Profil_x->SetStats(0);
 	Profil_x->GetXaxis()->SetTitle("Channel X");
@@ -3793,8 +3938,12 @@ int main(int argc, char** argv)
 	Profil_x->GetYaxis()->SetRangeUser(0,Profil_x->GetBinContent(Profil_x->GetMaximumBin())*1.05);
 	Profil_x->Draw();
 
-	cMap->cd(4);
+	if(dosedistribution==true)
+		cMap->cd(5);
+	else
+		cMap->cd(4);
 	Profil_y->SetTitle("");//Fluency map (particle/cm2)");
+	Profil_y->SetLineWidth(2.);
 	Profil_y->SetTitleSize(0.0);
 	Profil_y->SetStats(0);
 	Profil_y->GetXaxis()->SetTitle("Channel Y");
@@ -3810,11 +3959,98 @@ int main(int argc, char** argv)
 	Profil_y->GetYaxis()->SetLabelSize(0.02);
 	Profil_y->GetYaxis()->SetRangeUser(0,Profil_y->GetBinContent(Profil_y->GetMaximumBin())*1.05);
 	Profil_y->Draw();
+
+	if(dosedistribution==true)
+	{
+		for(int i=0;i<N_STRIPS;i++)
+			for(int j=0;j<N_STRIPS;j++)
+				TH2_Dose_tot->SetBinContent(i+1,j+1,Dose_tot[i][j]);
+
+		dose_max=TH2_Dose_tot->GetBinContent(TH2_Dose_tot->GetMaximumBin());
+		contours[0] = 0.*dose_max;
+		contours[1] = 0.2*dose_max;
+		contours[2] = 0.5*dose_max;
+		contours[3] = 0.9*dose_max;
+
+		Dose_dist_tot->SetName("Dose distribution");
+		Dose_dist_tot->SetBins(25,dose_max*.1,dose_max*1.1);
+
+		count_dose=0;
+		mean_dose=0.;
+		rms_dose=0.;
+		for(int i=0;i<N_STRIPS;i++)
+		{
+			for(int j=0;j<N_STRIPS;j++)
+			{
+				if(Dose_tot[i][j]>.9*dose_max)
+				{
+					mean_dose+=Dose_tot[i][j];
+					rms_dose+=Dose_tot[i][j]*Dose_tot[i][j];
+					count_dose++;
+				}
+				Dose_dist_tot->Fill(Dose_tot[i][j]);
+			}
+		}
+		mean_dose/=count_dose;
+		rms_dose=sqrt(rms_dose/count_dose-(mean_dose*mean_dose));
+
+		cout<<"Irradiation totale; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
+		if(logfileprint==true)
+			logfile<<"Irradiation totale; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
+
+		cMap->cd(3);
+		TH2_Dose_tot->SetTitle("");//Fluency map (particle/cm2)");
+		TH2_Dose_tot->SetTitleSize(0.0);
+		TH2_Dose_tot->SetStats(0);
+		TH2_Dose_tot->GetXaxis()->SetTitle("Channel X");
+		TH2_Dose_tot->GetXaxis()->SetNdivisions(N_STRIPS);
+		TH2_Dose_tot->GetXaxis()->SetTickSize(0.01);
+		TH2_Dose_tot->GetXaxis()->SetTitleSize(0.036);
+		TH2_Dose_tot->GetXaxis()->CenterTitle();
+		TH2_Dose_tot->GetXaxis()->SetLabelSize(0.02);
+		TH2_Dose_tot->GetYaxis()->SetTitle("Channel Y");
+		TH2_Dose_tot->GetYaxis()->SetNdivisions(N_STRIPS);
+		TH2_Dose_tot->GetYaxis()->SetTickSize(0.01);
+		TH2_Dose_tot->GetYaxis()->SetTitleSize(0.036);
+		TH2_Dose_tot->GetYaxis()->CenterTitle();
+		TH2_Dose_tot->GetYaxis()->SetLabelSize(0.02);
+		TH2_Dose_tot->Draw("colz");
+
+		TH2_Cont_tot=(TH2F*)TH2_Dose_tot->Clone("TH2_Cont_tot");
+		TH2_Cont_tot->SetContour(4, contours);
+		TH2_Cont_tot->SetLineColor(kWhite);
+		// TH2_Cont_tot->SetLineWidth(1.8);
+		TH2_Cont_tot->Draw("same cont3 list");
+
+		cMap->cd(6);
+		Dose_dist_tot->SetTitle("");//Fluency map (particle/cm2)");
+		Dose_dist_tot->SetLineWidth(2);
+		Dose_dist_tot->SetTitleSize(0.0);
+		Dose_dist_tot->SetStats(0);
+		Dose_dist_tot->GetXaxis()->SetTitle("Dose (Gy)");
+		Dose_dist_tot->GetXaxis()->SetTickSize(0.01);
+		Dose_dist_tot->GetXaxis()->SetTitleSize(0.036);
+		Dose_dist_tot->GetXaxis()->CenterTitle();
+		Dose_dist_tot->GetXaxis()->SetLabelSize(0.02);
+		Dose_dist_tot->GetYaxis()->SetTitle("Nombre pixels");
+		Dose_dist_tot->GetYaxis()->SetTickSize(0.01);
+		Dose_dist_tot->GetYaxis()->SetTitleSize(0.036);
+		Dose_dist_tot->GetYaxis()->CenterTitle();
+		Dose_dist_tot->GetYaxis()->SetLabelSize(0.02);
+		Dose_dist_tot->Draw();
+	}
+
 	cMap->SaveAs("Picture/Fluence_reconstruction.png");
-	
+	cout<<endl;
+	if(logfileprint==true)
+		logfile<<endl;
+
 	// rootfile->Write();
 	TH2_Map->Delete();
 	TH2_Map_up->Delete();
+	TH2_Dose_tot->Delete();
+	TH2_Cont_tot->Delete();
+	Dose_dist_tot->Delete();
 	// TH2_Map_tmp->Delete();
 	f2DGauss->Delete();
 	f2D2Gauss->Delete();
@@ -3906,6 +4142,10 @@ int main(int argc, char** argv)
 
 		// rootfile->Write();
 		cSamp->SaveAs("Picture/Sampling.png");
+		cout<<endl;
+		if(logfileprint==true)
+			logfile<<endl;
+
 		cSamp->Destructor();
 		TG_Mean_x->Delete();
 		TG_Mean_y->Delete();
