@@ -795,14 +795,15 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 	double* vect_dquanta=(double*)malloc(MAX_INTEGR*sizeof(double));
 
 	t0=-1;
+	t0=Global_t0;
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
 		label=faster_data_label(data);
 		if(label==LabelCount)
 		{
 			faster_data_load(data,&scaler_cnt);
-			if(t0==-1)
-				t0=faster_data_clock_sec(data);
+			// if(t0==-1)
+			// 	t0=faster_data_clock_sec(data);
 			fasterTime=faster_data_clock_sec(data)-t0;
 			vect_time_q[count_quanta]=fasterTime;
 			if(last_quanta==-1)
@@ -877,16 +878,16 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 		calib_factor_X=chargeTot_X/quanta;
 		calib_factor_Y=chargeTot_Y/quanta;
 		cout<<"Calibrage issu des quanta"<<endl;
-		cout<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
-		cout<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
-		cout<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+		cout<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
+		cout<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
+		cout<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor*1000.<<"(fC/part.)"<<endl;
 
 		if(logfileprint==true)
 		{
 			logfile<<"Calibrage issu des quanta"<<endl;
-			logfile<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
-			logfile<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
-			logfile<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+			logfile<<"Calib.  X : "<<chargeTot_X<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor_X*1000.<<"(fC/part.)"<<endl;
+			logfile<<"Calib.  Y : "<<chargeTot_Y<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor_Y*1000.<<"(fC/part.)"<<endl;
+			logfile<<"Calibrage : "<<chargeTot_pC<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor*1000.<<"(fC/part.)"<<endl;
 		}
 
 		Vect_calib_factor.push_back(calib_factor);
@@ -930,6 +931,7 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 	scaler_measurement scaler_meas;
 	reader=faster_file_reader_open(file);
 	TString name_qth2th;
+	int count=0;
 	int label;
 	int j;
 	int current_area=0;
@@ -942,17 +944,18 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 	double calib_factor;
 
 	TH1F *hQth2th = new TH1F("hQth2th","Charge threshold to threshold",1000,0.,4000);
-
 	t0=-1;
+	t0=Global_t0;
 	// while((data=faster_file_reader_next(reader))!=NULL) 
 	while((data=faster_file_reader_next(reader))!=NULL&&current_area<tot_area) 
 	{
 		label=faster_data_label(data);
 		if(label==LabelScaler)
 		{
+			count++;
 			faster_data_load(data,&scaler_meas);
-			if(t0==-1)
-				t0=faster_data_clock_sec(data);
+			// if(t0==-1)
+			// 	t0=faster_data_clock_sec(data);
 			fasterTime=faster_data_clock_sec(data)-t0;
 			if(fasterTime>signal_time[current_area][0]&&fasterTime<signal_time[current_area][1])
 			{
@@ -967,8 +970,12 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				quanta+=j+1;
 			}
 			else
+			{
 				if(in_area==0&&fasterTime>signal_time[current_area][1])
 					in_area=1;
+			}
+			if(count==compt_label[label]&&in_area==0)
+				in_area=1;
 			if(in_area==1)
 			{
 				in_area=1;
@@ -1011,19 +1018,19 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				cout<<"Calibrage issu du scaler"<<endl;
 				if(tot_area==1)
 				{
-					cout<<"Calib.  X : "<<vect_charge_x[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_x[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
-					cout<<"Calib.  Y : "<<vect_charge_y[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_y[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
+					cout<<"Calib.  X : "<<setprecision(2)<<vect_charge_x[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<vect_charge_x[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
+					cout<<"Calib.  Y : "<<setprecision(2)<<vect_charge_y[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<vect_charge_y[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
 				}
-				cout<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+				cout<<"Calibrage : "<<setprecision(2)<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor*1000.<<"(fC/part.)"<<endl;
 				if(logfileprint==true)
 				{
 					logfile<<"Calibrage issu du scaler"<<endl;
 					if(tot_area==1)
 					{
-						logfile<<"Calib.  X : "<<vect_charge_x[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_x[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
-						logfile<<"Calib.  Y : "<<vect_charge_y[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<vect_charge_y[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
+						logfile<<"Calib.  X : "<<setprecision(2)<<vect_charge_x[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<vect_charge_x[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
+						logfile<<"Calib.  Y : "<<setprecision(2)<<vect_charge_y[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<vect_charge_y[current_area]/quanta*1000.<<"(fC/part.)"<<endl;
 					}
-					logfile<<"Calibrage : "<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<calib_factor*1000.<<"(fC/part.)"<<endl;
+					logfile<<"Calibrage : "<<setprecision(2)<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor*1000.<<"(fC/part.)"<<endl;
 				}
 
 				Vect_calib_factor[current_area]=calib_factor;
@@ -1051,7 +1058,7 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 	int count_X=0;
 	int count_Y=0;
 	double charge;
-	double t0=-1;
+	double t0;
 	double fasterTime;
 	double eoff_sample=bound_eoff;
 	double EOffX[N_STRIPS];
@@ -1065,6 +1072,9 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 
 	if(last_signal<fin_eoff-eoff_sample)
 		fin_eoff=last_signal+eoff_sample;
+
+	t0=-1.;
+	t0=Global_t0;
 
 	if(bkgnd_param==1||bkgnd_param==3)
 	{
@@ -1081,8 +1091,8 @@ void ElectronicOffsetExtraction(char *file,double first_signal,double last_signa
 			if(label==LabelX||label==LabelY)
 			{
 				faster_data_load(data,&electro);
-				if(t0==-1)
-					t0=faster_data_clock_sec(data);
+				// if(t0==-1)
+				// 	t0=faster_data_clock_sec(data);
 				fasterTime=faster_data_clock_sec(data)-t0;
 				if((fasterTime<(first_signal-1.)&&fasterTime>debut_eoff&&beg_on==0)||(fasterTime>(last_signal+1.)&&fasterTime<fin_eoff&&end_on==0))
 				{
@@ -1336,10 +1346,11 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
 		label=faster_data_label(data);
+		compt_label[label]++;
+		if(t0==-1)
+			t0=faster_data_clock_sec(data);
 		if(label==LabelX||label==LabelY)
 		{
-			if(t0==-1)
-				t0=faster_data_clock_sec(data);
 			faster_data_load(data,&electro);
 			fasterTime=faster_data_clock_sec(data)-t0;
 			for(int j=0;j<N_STRIPS;j++) 
@@ -1627,6 +1638,8 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_time_int);
 	free(vect_charge_int);
 	free(vect_dcharge_int);
+
+	Global_t0=t0;
 }
 
 void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
@@ -1672,10 +1685,11 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
 		label=faster_data_label(data);
+		compt_label[label]++;
+		if(t0==-1)
+			t0=faster_data_clock_sec(data);
 		if(label==LabelX||label==LabelY)
 		{
-			if(t0==-1)
-				t0=faster_data_clock_sec(data);
 			faster_data_load(data,&electro);
 			fasterTime=faster_data_clock_sec(data)-t0;
 			for(int j=0;j<N_STRIPS;j++) 
@@ -1857,6 +1871,8 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_time_int);
 	free(vect_charge_int);
 	free(vect_dcharge_int);
+
+	Global_t0=t0;
 }
 
 void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
@@ -1906,11 +1922,12 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
 		label=faster_data_label(data);
+		compt_label[label]++;
+		if(t0==-1)
+			t0=faster_data_clock_sec(data);
 		if(label==LabelCount)
 		{
 			faster_data_load(data,&scaler_cnt);
-			if(t0==-1)
-				t0=faster_data_clock_sec(data);
 			fasterTime=faster_data_clock_sec(data)-t0;
 			vect_time_q[count_quanta]=fasterTime;
 			if(last_quanta==-1)
@@ -1923,8 +1940,6 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 
 		if(label==LabelX||label==LabelY)
 		{
-			if(t0==-1)
-				t0=faster_data_clock_sec(data);
 			faster_data_load(data,&electro);
 			fasterTime=faster_data_clock_sec(data)-t0;
 			for(int j=0;j<N_STRIPS;j++) 
@@ -2135,6 +2150,8 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_charge_int);
 	free(vect_dcharge_int);
 	free(vect_dquanta);
+
+	Global_t0=t0;
 }
 
 void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
@@ -2172,10 +2189,11 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	while((data=faster_file_reader_next(reader))!=NULL) 
 	{
 		label=faster_data_label(data);
+		compt_label[label]++;
+		if(t0==-1)
+			t0=faster_data_clock_sec(data);
 		if(label==LabelX||label==LabelY)
 		{
-			if(t0==-1)
-				t0=faster_data_clock_sec(data);
 			faster_data_load(data,&electro);
 			fasterTime=faster_data_clock_sec(data)-t0;
 			for(int j=0;j<N_STRIPS;j++) 
@@ -2296,9 +2314,11 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	free(vect_charge);
 	free(vect_time_int);
 	free(vect_charge_int);
+
+	Global_t0=t0;
 }
 
-void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,double time,double *sum_val)
+void SubFittingBackground(int SFBdraw,int binl,int binr,double time,double *sum_val)
 {
 	// Gros bordel entre les bin qui partent de 1 et les vecteurs de 0
 	// plus le fait que les pistes doivent être représentées en milieu de bin 
@@ -2321,6 +2341,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 	TGraph *TG_Visu=new TGraph();
 	TF1* SinProfile=new TF1("SinProfile","TMath::Sin(x)",2,31);
 	TF1* PolNProfile=new TF1("PolNProfile","pol8",2,31);
+
 
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
@@ -2361,10 +2382,7 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double min,double max,do
 		x=LAST_ELEC+1.5;
 		bdf_SFB=par[0]+par[1]*x+par[2]*pow(x,2)+par[3]*pow(x,3)+par[4]*pow(x,4)+par[5]*pow(x,5)+par[6]*pow(x,6)+par[7]*pow(x,7)+par[8]*pow(x,8);
 		TG_Visu->SetPoint(LAST_ELEC,x-.5,bdf_SFB);
-	}
 
-	if(SFBdraw==1)
-	{
 		y_min=Profile->GetMinimum()*1.1;
 		y_max=Profile->GetMaximum()*1.1;
 
@@ -2541,8 +2559,6 @@ int main(int argc, char** argv)
 	double y2;
 	double y3;
 	double ydecal=.04;
-	double min;
-	double max;
 	double calib_factor;
 	double chargeTot_pC=0.;
 	double chargeTot_signal_X=0.;
@@ -2666,6 +2682,10 @@ int main(int argc, char** argv)
 		for(int i=0;i<N_STRIPS;i++)
 			Dose_tot[i][j]=0.;
 	}
+	
+	for(int l=0;l<3000;l++)
+		compt_label[l]=0;
+
 	ChX->Reset();
 	ChY->Reset();
 	SamplX->Reset();
@@ -2686,6 +2706,10 @@ int main(int argc, char** argv)
 		QuantaSignalArea(filename,&tot_area,signal_time);
 	if(area_find_param==3)
 		ManualSignalArea(filename,&tot_area,signal_time);
+
+	// for(int l=0;l<3000;l++)
+	// 	if(compt_label[l]>0)
+	// 		cout<<l<<" "<<compt_label[l]<<endl;
 	
 	if(tot_area>MAX_SMPL)
 	{
@@ -2738,6 +2762,8 @@ int main(int argc, char** argv)
 	nbSummedSample=0;
 	count_area=0;
 	t0=-1; 
+	t0=Global_t0;
+	t1=0.;
 
 	for(int j=0;j<N_STRIPS;j++)
 	{
@@ -2762,11 +2788,11 @@ int main(int argc, char** argv)
 		if(label==LabelX||label==LabelY)
 		{
 			i_tmp++;
-			if(t0==-1)
-			{
-				t0=faster_data_clock_sec(data);
-				t1=0.;
-			}
+			// if(t0==-1)
+			// {
+			// 	t0=faster_data_clock_sec(data);
+			// 	t1=0.;
+			// }
 			faster_data_load(data,&electro);
 
 			fasterTime=faster_data_clock_sec(data)-t0;
@@ -2791,8 +2817,6 @@ int main(int argc, char** argv)
 			{
 				PreSFB.clear();
 				PostSFB.clear();
-				min=DBL_MAX;
-				max=0.;
 				for(int j=FIRST_ELEC;j<LAST_ELEC;j++) 
 				{
 					charge=electrometer_channel_charge_pC(electro,j+1);
@@ -2801,8 +2825,6 @@ int main(int argc, char** argv)
 						case LabelX:
 							val=charge-EOffX[j];
 							val=val*lissage_factor[j][0];
-							if(val>max)	max=val;
-							if(val<min)	min=val;
 							PreSFB[j]=val;
 							isLabelX=1;
 							strip_min=borne_m_x;
@@ -2811,8 +2833,6 @@ int main(int argc, char** argv)
 						case LabelY:
 							val=charge-EOffY[j];
 							val=val*lissage_factor[j][1];
-							if(val>max)	max=val;
-							if(val<min)	min=val;
 							PreSFB[j]=val;
 							isLabelY=1;
 							strip_min=borne_m_y;
@@ -2825,7 +2845,7 @@ int main(int argc, char** argv)
 					bool_print=0;
 				if((fasterTime>mid_signal&&bool_print==0))
 					bool_print=1;
-				SubFittingBackground(bool_print,strip_min,strip_max,min,max,fasterTime,&sum_val);
+				SubFittingBackground(bool_print,strip_min,strip_max,fasterTime,&sum_val);
 				if(bool_print==1)
 					bool_print=2;
 				// for(int iii=0;iii<N_STRIPS;iii++)
@@ -3839,6 +3859,15 @@ int main(int argc, char** argv)
 	TH2_Map->GetYaxis()->SetLabelSize(0.02);
 	// TH2_Map->Fit(f2DGauss);
 	TH2_Map->Draw("colz");
+	if(bkgnd_param==3)
+	{
+		TBox *beam_box= new TBox();
+		beam_box->SetFillStyle(0);
+		beam_box->SetLineColor(6);
+		beam_box->SetLineWidth(2);
+		beam_box->SetLineStyle(5);
+		beam_box->DrawBox(borne_m_x,borne_m_y,borne_M_x,borne_M_y);
+	}
 
 	cMap->cd(2);
 	// bin_up=N_STRIPS;

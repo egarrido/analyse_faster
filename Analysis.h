@@ -47,7 +47,7 @@
 #include "Calibrage_data.h"
 // #include "Label_Arronax.h"	// 11-12
 // #include "Label_CPO.h"	// 1-2
-#include "Label_Cyrce.h"	// 4-6
+#include "Label_Cyrce.h"	// 5-6
 
 std::ofstream logfile;
 const bool logfileprint=true;
@@ -86,6 +86,7 @@ const int MAX_INTEGR=1000000;
 const double strip_width=.3; //cm
 const double gap_Dosion=3.; //mm
 
+int compt_label[3000];
 char Execution[80];
 bool dosedistribution=true;
 int bkgnd_param=0;
@@ -100,6 +101,7 @@ int borne_m_x=16;
 int borne_M_x=17;
 int borne_m_y=16;
 int borne_M_y=17;
+double Global_t0=0.;
 double bound_min=30.;
 double bound_max=60.;
 double bound_eoff=20.;
