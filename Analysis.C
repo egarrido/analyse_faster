@@ -61,8 +61,6 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	13
 	Variable_init.push_back("Smoothing"); // 14
 	Value_init.push_back(0.);	//	14
-	Variable_init.push_back("Chamber value (Gy)"); // 15
-	Value_init.push_back(0.);	//	15
 
 	cout<<endl;
 	if(logfileprint==true)
@@ -502,12 +500,6 @@ void EntryParameters(int config_simu)
 		cout<<" Smoothing applied"<<endl;
 	}
 
-	ivar=15;
-	if(Value_init[ivar]==0)
-		cout<<" No additional dose value used"<<endl;
-	else
-		cout<<" External dose value of "<<Value_init[ivar]<<" Gy"<<endl;
-
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
 	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 	cout<<"=================================================="<<endl;
@@ -608,12 +600,6 @@ void EntryParameters(int config_simu)
 			logfile<<" No smoothing applied"<<endl;
 		if(Value_init[ivar]==1)
 			logfile<<" Smoothing applied"<<endl;
-
-		ivar=15;
-		if(Value_init[ivar]==0)
-			logfile<<" No additional dose value used"<<endl;
-		else
-			logfile<<" External dose value of "<<Value_init[ivar]<<" Gy"<<endl;
 
 		// for(ivar=4;ivar<Variable_init.size();ivar++)
 		// 	logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -939,11 +925,13 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 	double t0;
 	double fasterTime;
 	double Qth2th;
+	double maxx=0.;
 	double maxy;
 	long int quanta=0;
 	double calib_factor;
 
-	TH1F *hQth2th = new TH1F("hQth2th","Charge threshold to threshold",1000,0.,4000);
+	TH1F *hQth2th = new TH1F("hQth2th","Charge threshold to threshold",5000,0.,20000);
+	// TH1F *hQth2th = new TH1F();
 	t0=-1;
 	t0=Global_t0;
 	// while((data=faster_file_reader_next(reader))!=NULL) 
@@ -978,6 +966,13 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				in_area=1;
 			if(in_area==1)
 			{
+				maxx=0.;
+				for(int i=0;i<hQth2th->GetNbinsX();i++)
+					if(hQth2th->GetBinContent(i)>2.&&hQth2th->GetBinCenter(i)>maxx)
+						maxx=hQth2th->GetBinCenter(i);
+				maxx+=100.;	
+				hQth2th->GetXaxis()->SetRangeUser(0.,maxx);
+
 				in_area=1;
 				name_qth2th="TH1_Qth2th_";
 				name_qth2th+=(current_area+1);
@@ -1040,6 +1035,19 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				in_area=2;
 				current_area+=1;
 				quanta=0;
+				maxx=0.;
+				if(fasterTime>signal_time[current_area][0]&&fasterTime<signal_time[current_area][1])
+				{
+					in_area=0;
+					Qth2th=scaler_meas.qtt;
+					hQth2th->Fill(Qth2th);
+					j=MAX_QNT-1;
+					while(Seuil_quanta[current_area][j]>Qth2th&&j>0)
+						j--;
+					// if((double)rand()/RAND_MAX>0.99)
+					// 	cout<<" "<<j<<" "<<Seuil_quanta[current_area][j]<<" "<<Qth2th<<endl;
+					quanta+=j+1;
+				}
 			}
 		}
 	}
@@ -1563,11 +1571,14 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->Draw("AL");
 
 	cCharge->cd(2);
+	TString title_charge="Integrated charge with a step of ";
+	title_charge+=integration;
+
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
 	TG_Charge_int->SetLineColor(2);
 	TG_Charge_int->SetLineWidth(1.5);
-	TG_Charge_int->SetTitle("Charge over time");
+	TG_Charge_int->SetTitle(title_charge);
 	TG_Charge_int->GetXaxis()->SetTitle("Time (s)");
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
@@ -1816,11 +1827,14 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->Draw("AL");
 
 	cCharge->cd(2);
+	TString title_charge="Integrated charge with a step of ";
+	title_charge+=integration;
+
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
 	TG_Charge_int->SetLineColor(2);
 	TG_Charge_int->SetLineWidth(1.5);
-	TG_Charge_int->SetTitle("Charge over time");
+	TG_Charge_int->SetTitle(title_charge);
 	TG_Charge_int->GetXaxis()->SetTitle("Time (s)");
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
@@ -2074,11 +2088,14 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->Draw("AL");
 
 	cCharge->cd(2);
+	TString title_charge="Integrated charge with a step of ";
+	title_charge+=integration;
+
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
 	TG_Charge_int->SetLineColor(2);
 	TG_Charge_int->SetLineWidth(1.5);
-	TG_Charge_int->SetTitle("Charge over time");
+	TG_Charge_int->SetTitle(title_charge);
 	TG_Charge_int->GetXaxis()->SetTitle("Time (s)");
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
@@ -2278,11 +2295,14 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->Draw("AL");
 
 	cCharge->cd(2);
+	TString title_charge="Integrated charge with a step of ";
+	title_charge+=integration;
+
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
 	TG_Charge_int->SetLineColor(2);
 	TG_Charge_int->SetLineWidth(1.5);
-	TG_Charge_int->SetTitle("Charge over time");
+	TG_Charge_int->SetTitle(title_charge);
 	TG_Charge_int->GetXaxis()->SetTitle("Time (s)");
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
@@ -2467,11 +2487,6 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double time,double *sum_
 
 double DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS],double Dose[N_STRIPS][N_STRIPS])
 {
-	double energy_value=area_energy[nb_area];
-	double calibration_value=area_calib[nb_area];
-	double TEL=TEL_value(1,energy_value);
-	double pC_to_Gy=TEL/(calibration_value*pow(strip_width,2)/1000.)*q*1.E10;
-
 	// ***********************************************
 	// TEL=keV.um-1=1000.eV.1E-6.m-1=1E9.eV.m-1
 	// Calib_value=fC.part-1(integrale)=fC
@@ -2482,6 +2497,11 @@ double DoseDistribution(int nb_area,double Fluence[N_STRIPS][N_STRIPS],double Do
 	// pC_to_Gy=1E13.eV.pC-1.m-1.m-2=1E13.eV.pC-1.m-3
 	// pC_to_Gy=1E13.[eV.m-3].pC-1. <=> 1E10.q.Gy.pC-1
 	// ***********************************************
+
+	double energy_value=area_energy[nb_area];
+	double calibration_value=area_calib[nb_area];
+	double TEL=TEL_value(1,energy_value);
+	double pC_to_Gy=TEL/(calibration_value*pow(strip_width,2)/1000.)*q*1.E10;
 
 	for(int i=0;i<N_STRIPS;i++)
 		for(int j=0;j<N_STRIPS;j++)
@@ -2636,20 +2656,29 @@ int main(int argc, char** argv)
 	if(calibrage_used==6&&energy_used==1)
 	{
 		calib_energy=Loss_value(energy,1.2e-3)/W_air*q*1.E15;
-		cout<<"Valeur théorique de calibrage à "<<setprecision(4)<<energy<<" MeV : "<<setprecision(6)<<calib_energy<<" fC/part."<<endl;
+		cout<<"Valeur théorique de calibrage à "<<setprecision(2)<<energy<<" MeV : "<<setprecision(6)<<calib_energy<<" fC/part."<<endl;
 		if(logfileprint==true)
-			logfile<<"Valeur théorique de calibrage à "<<setprecision(4)<<energy<<" MeV : "<<setprecision(6)<<calib_energy<<" fC/part."<<endl;
+			logfile<<"Valeur théorique de calibrage à "<<setprecision(2)<<energy<<" MeV : "<<setprecision(6)<<calib_energy<<" fC/part."<<endl;
 		calib_entry=calib_energy;
 		calibrage_used=1;
 	}
+
+	if(calibrage_used==7)
+	{
+		for(int i=ind_cal;i<ind_en;i++)
+			multiple_calib[i]=Loss_value(multiple_energy[i],1.2e-3)/W_air*q*1.E15;
+		ind_cal=ind_en;
+		calibrage_used=6;
+	}
+
 	if(calibrage_used==6&&energy_used==2)
 	{
 		for(int i=0;i<ind_en;i++)
 		{
 			multiple_calib_th[i]=Loss_value(multiple_energy[i],1.2e-3)/W_air*q*1.E15;
-			cout<<"Valeur théorique de calibrage à "<<setprecision(4)<<multiple_energy[i]<<" MeV : "<<setprecision(6)<<multiple_calib_th[i]<<" fC/part."<<endl;
+			cout<<"Valeur théorique de calibrage à "<<setprecision(2)<<multiple_energy[i]<<" MeV : "<<setprecision(6)<<multiple_calib_th[i]<<" fC/part."<<endl;
 			if(logfileprint==true)
-				logfile<<"Valeur théorique de calibrage à "<<setprecision(4)<<multiple_energy[i]<<" MeV : "<<setprecision(6)<<multiple_calib_th[i]<<" fC/part."<<endl;
+				logfile<<"Valeur théorique de calibrage à "<<setprecision(2)<<multiple_energy[i]<<" MeV : "<<setprecision(6)<<multiple_calib_th[i]<<" fC/part."<<endl;
 			multiple_calib[i]=multiple_calib_th[i];
 		}
 		calibrage_used=5;
@@ -2734,14 +2763,6 @@ int main(int argc, char** argv)
 				indice=i;
 			area_energy[i]=multiple_energy[indice];
 		}
-	}
-
-	if(calibrage_used==7)
-	{
-		for(int i=ind_cal;i<ind_en;i++)
-			multiple_calib[i]=Loss_value(multiple_energy[i],1.2e-3)/W_air*q*1.E15;
-		ind_cal=ind_en;
-		calibrage_used=5;
 	}
 
 	if(dosedistribution==true)
@@ -3034,13 +3055,18 @@ int main(int argc, char** argv)
 				{
 					ii=i+1;
 					Profil_x_area->SetBinContent(i+1,AreaX->GetAt(i));
-					Profil_y_area->SetBinContent(i+1,AreaY->GetAt(i));
 					if(AreaX->GetAt(i)>Threshold)
 					{
 						mean_x+=ii*AreaX->GetAt(i);
 						rms_x+=ii*ii*AreaX->GetAt(i);
 						sum_x+=AreaX->GetAt(i);
 					}
+				}
+				for(int i=0;i<N_STRIPS;i++)
+				// for(int i=borne_m_y;i<=borne_M_y;i++)
+				{
+					ii=i+1;
+					Profil_y_area->SetBinContent(i+1,AreaY->GetAt(i));
 					if(AreaY->GetAt(i)>Threshold)
 					{
 						mean_y+=ii*AreaY->GetAt(i);
@@ -3134,6 +3160,15 @@ int main(int argc, char** argv)
 				TH2_Area->GetYaxis()->CenterTitle();
 				TH2_Area->GetYaxis()->SetLabelSize(0.02);
 				TH2_Area->Draw("colz");
+				if(bkgnd_param==3)
+				{
+					TBox *beam_box= new TBox();
+					beam_box->SetFillStyle(0);
+					beam_box->SetLineColor(6);
+					beam_box->SetLineWidth(2);
+					beam_box->SetLineStyle(5);
+					beam_box->DrawBox(borne_m_x,borne_m_y,borne_M_x,borne_M_y);
+				}
 
 				pad1->cd();
 				i_cx=ceil(mean_x);
@@ -3317,6 +3352,15 @@ int main(int argc, char** argv)
 					TH2_Cont->SetLineColor(kWhite);
 					// TH2_Cont->SetLineWidth(1.8);
 					TH2_Cont->Draw("same cont3 list");
+					if(bkgnd_param==3)
+					{
+						TBox *beam_box= new TBox();
+						beam_box->SetFillStyle(0);
+						beam_box->SetLineColor(6);
+						beam_box->SetLineWidth(2);
+						beam_box->SetLineStyle(5);
+						beam_box->DrawBox(borne_m_x,borne_m_y,borne_M_x,borne_M_y);
+					}
 
 					pad4->cd();
 					Dose_dist->SetTitle("");//Fluency map (particle/cm2)");

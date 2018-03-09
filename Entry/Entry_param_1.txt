@@ -13,4 +13,3 @@ Acquisition time for electronic offset (s): 20.
 Integration steps: 50
 Gaussian to fit: 1
 Smoothing: no
-Chamber value (Gy): 1
