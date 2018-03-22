@@ -84,7 +84,7 @@ const int MAX_PEAK=10;
 const int MAX_SMPL=10000;
 const int MAX_INTEGR=1000000;
 const double strip_width=.3; //cm
-const double gap_Dosion=2.99; //mm
+const double gap_Dosion=5.05; //mm
 
 int compt_label[3000];
 char Execution[80];

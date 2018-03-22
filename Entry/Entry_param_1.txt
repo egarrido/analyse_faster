@@ -1,13 +1,13 @@
-File: C_1000_position_pt_1_0001.fast
-Path for the file: Cyrce/04_2017/
+File: Double_PTW_pos8_02_0001.fast
+Path for the file: Cyrce/03_2018/
 Background extraction (yes/no sub/function/default): yes
 Irradiation area finding way (charge/derivative/quanta/manual): charge
 Boundaries (s): 21. 125.
 Threshold: 40200.
-Exclusion strips X: 14 20
-Exclusion strips Y: 14 20 
-Calibrate data: nothing Entry/Calib_cyrce.txt
-Particle energy: nothing Entry/Energy_cyrce.txt
+Exclusion strips X: 10 20
+Exclusion strips Y: 17 27 
+Calibrate data: 0.1464
+Particle energy: 17.83
 Time sampling (s): 1000.
 Acquisition time for electronic offset (s): 20.
 Integration steps: 50

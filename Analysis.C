@@ -335,15 +335,34 @@ void EntryParameters(int config_simu)
 					}
 					if(ind_value==15)
 					{
-						if(CheckDouble(buffer)==1)
+						lissage_param=0;
+						std::size_t found=buffer.find_first_of(' ');
+						std::string bufferofbuffer=buffer.substr(0,found);
+						if(!bufferofbuffer.compare("no"))
+							lissage_param=0;
+						if(!bufferofbuffer.compare("yes")||!bufferofbuffer.compare("Yes"))
 						{
-							Value_init[ind_value]=(double)atof(buffer.c_str());
-							external_dose=(double)atof(buffer.c_str());
-						}
-						else
-						{
-							if(!buffer.compare("nothing"))
-								Value_init[ind_value]=0;
+							int ind=0;
+							int ligne;
+							buffer=buffer.substr(found+1);
+							cout<<"Smoothing values stored in file: "<<buffer<<endl;
+							ifstream smooth_file(buffer.c_str());
+							if(!smooth_file)
+							{
+								cout<<"No smoothing file"<<endl;
+								lissage_param=0;
+							}
+							else
+							{
+								while(true)
+								{
+									smooth_file>>ligne>>lissage_factor[ind][0]>>lissage_factor[ind][1];
+									ind++;
+									if(smooth_file.eof()||ind>N_STRIPS) break;
+								}
+								smooth_file.close();
+								lissage_param=1;
+							}
 						}
 					}
 				}	
@@ -385,7 +404,7 @@ void EntryParameters(int config_simu)
 	cout<<" Parameters for the initialisation; config: "<<config_simu<<endl;
 	cout<<"--------------------------------------------------"<<endl;
 
-	cout<<" Gap size: "<<gap_Dosion<<" mm"<<endl;
+	cout<<" Gap size: "<<setprecision(2)<<fixed<<gap_Dosion<<" mm"<<endl;
 
 	cout<<" File of data: "<<data_faster_file<<endl;
 
@@ -492,13 +511,10 @@ void EntryParameters(int config_simu)
 	area_find_param=Value_init[ivar];
 
 	ivar=14;
-	if(Value_init[ivar]==0)
+	if(lissage_param==0)
 		cout<<" No smoothing applied"<<endl;
-	if(Value_init[ivar]==1)
-	{
-		lissage_param=1;
+	if(lissage_param==1)
 		cout<<" Smoothing applied"<<endl;
-	}
 
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
 	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -514,7 +530,7 @@ void EntryParameters(int config_simu)
 		logfile<<" Parameters for the initialisation; config: "<<config_simu<<endl;
 		logfile<<"--------------------------------------------------"<<endl;
 	
-		logfile<<" Gap size: "<<gap_Dosion<<" mm"<<endl;
+		logfile<<" Gap size: "<<setprecision(2)<<fixed<<gap_Dosion<<" mm"<<endl;
 		
 		logfile<<" File of data: "<<data_faster_file<<endl;
 
@@ -596,9 +612,9 @@ void EntryParameters(int config_simu)
 			logfile<<" Irradiation manually defined ["<<bound_min<<" s;"<<bound_max<<" s]"<<endl;
 
 		ivar=14;
-		if(Value_init[ivar]==0)
+		if(lissage_param==0)
 			logfile<<" No smoothing applied"<<endl;
-		if(Value_init[ivar]==1)
+		if(lissage_param==1)
 			logfile<<" Smoothing applied"<<endl;
 
 		// for(ivar=4;ivar<Variable_init.size();ivar++)
@@ -1028,9 +1044,9 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 					logfile<<"Calibrage : "<<setprecision(2)<<vect_charge_t[current_area]<<"(pC)/"<<quanta<<"(part.) = "<<setprecision(6)<<calib_factor*1000.<<"(fC/part.)"<<endl;
 				}
 
-				Vect_calib_factor[current_area]=calib_factor;
-				Vect_calib_charge[current_area]=vect_charge_t[current_area];
-				Vect_calib_quanta[current_area]=quanta;
+				Vect_calib_factor.at(current_area)=calib_factor;
+				Vect_calib_charge.at(current_area)=vect_charge_t[current_area];
+				Vect_calib_quanta.at(current_area)=quanta;
 
 				in_area=2;
 				current_area+=1;
@@ -1553,6 +1569,12 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->Divide(1,4);
 
 	cCharge->cd(1);
+	TString absc_charge="Charge (pC/";
+	stringstream ss;
+	ss<<setprecision(3)<<(vect_time[1]-vect_time[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
+
 	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
 	TG_Charge->SetMarkerColor(2);
 	TG_Charge->SetLineColor(2);
@@ -1562,7 +1584,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->GetXaxis()->SetTickSize(0.01);
 	TG_Charge->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge->GetYaxis()->SetTickSize(0.01);
 	TG_Charge->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge->GetYaxis()->CenterTitle();
@@ -1573,6 +1595,11 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->cd(2);
 	TString title_charge="Integrated charge with a step of ";
 	title_charge+=integration;
+	absc_charge="Charge (pC/";
+	ss.str("");
+	ss<<setprecision(3)<<(vect_time_int[1]-vect_time_int[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
 
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
@@ -1583,7 +1610,7 @@ void DerivativeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge_int->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge_int->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge_int->GetYaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetYaxis()->CenterTitle();
@@ -1809,6 +1836,12 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->Divide(1,3);
 
 	cCharge->cd(1);
+	TString absc_charge="Charge (pC/";
+	stringstream ss;
+	ss<<setprecision(3)<<(vect_time[1]-vect_time[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
+
 	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
 	TG_Charge->SetMarkerColor(2);
 	TG_Charge->SetLineColor(2);
@@ -1818,7 +1851,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->GetXaxis()->SetTickSize(0.01);
 	TG_Charge->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge->GetYaxis()->SetTickSize(0.01);
 	TG_Charge->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge->GetYaxis()->CenterTitle();
@@ -1829,6 +1862,11 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->cd(2);
 	TString title_charge="Integrated charge with a step of ";
 	title_charge+=integration;
+	absc_charge="Charge (pC/";
+	ss.str("");
+	ss<<setprecision(3)<<(vect_time_int[1]-vect_time_int[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
 
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
@@ -1839,7 +1877,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge_int->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge_int->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge_int->GetYaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetYaxis()->CenterTitle();
@@ -2070,6 +2108,12 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->Divide(1,4);
 
 	cCharge->cd(1);
+	TString absc_charge="Charge (pC/";
+	stringstream ss;
+	ss<<setprecision(3)<<(vect_time[1]-vect_time[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
+
 	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
 	TG_Charge->SetMarkerColor(2);
 	TG_Charge->SetLineColor(2);
@@ -2079,7 +2123,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->GetXaxis()->SetTickSize(0.01);
 	TG_Charge->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge->GetYaxis()->SetTickSize(0.01);
 	TG_Charge->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge->GetYaxis()->CenterTitle();
@@ -2090,6 +2134,11 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->cd(2);
 	TString title_charge="Integrated charge with a step of ";
 	title_charge+=integration;
+	absc_charge="Charge (pC/";
+	ss.str("");
+	ss<<setprecision(3)<<(vect_time_int[1]-vect_time_int[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
 
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
@@ -2100,7 +2149,7 @@ void QuantaSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge_int->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge_int->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge_int->GetYaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetYaxis()->CenterTitle();
@@ -2277,6 +2326,12 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->Divide(1,2);
 
 	cCharge->cd(1);
+	TString absc_charge="Charge (pC/";
+	stringstream ss;
+	ss<<setprecision(3)<<(vect_time[1]-vect_time[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
+
 	TGraph *TG_Charge=new TGraph(count_tot,vect_time,vect_charge);
 	TG_Charge->SetMarkerColor(2);
 	TG_Charge->SetLineColor(2);
@@ -2286,7 +2341,7 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->GetXaxis()->SetTickSize(0.01);
 	TG_Charge->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge->GetYaxis()->SetTickSize(0.01);
 	TG_Charge->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge->GetYaxis()->CenterTitle();
@@ -2297,6 +2352,11 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	cCharge->cd(2);
 	TString title_charge="Integrated charge with a step of ";
 	title_charge+=integration;
+	absc_charge="Charge (pC/";
+	ss.str("");
+	ss<<setprecision(3)<<(vect_time_int[1]-vect_time_int[0])*1000.;
+	absc_charge+=ss.str();
+	absc_charge+=" ms)";
 
 	TGraph *TG_Charge_int=new TGraph(count_int,vect_time_int,vect_charge_int);
 	TG_Charge_int->SetMarkerColor(2);
@@ -2307,7 +2367,7 @@ void ManualSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge_int->GetXaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetXaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetXaxis()->SetLabelSize(0.05);
-	TG_Charge_int->GetYaxis()->SetTitle("Charge (pC)");
+	TG_Charge_int->GetYaxis()->SetTitle(absc_charge);
 	TG_Charge_int->GetYaxis()->SetTickSize(0.01);
 	TG_Charge_int->GetYaxis()->SetTitleSize(0.06);
 	TG_Charge_int->GetYaxis()->CenterTitle();
@@ -2365,8 +2425,8 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double time,double *sum_
 
 	for(int i=FIRST_ELEC;i<LAST_ELEC;i++)
 	{
-		scale_value=PreSFB[i];
-		Profile->SetBinContent(i+1,PreSFB[i]);
+		scale_value=PreSFB.at(i);
+		Profile->SetBinContent(i+1,PreSFB.at(i));
 		if(i+1<=binl||i+1>=binr)
 		{
 			ProfExc->SetBinContent(i+1,scale_value);
@@ -2385,12 +2445,12 @@ void SubFittingBackground(int SFBdraw,int binl,int binr,double time,double *sum_
 		bdf_SFB=0.;
 		for(int ii=0;ii<i_par;ii++)
 			bdf_SFB+=par[ii]*pow(x,ii);
-		PostSFB[i]=PreSFB[i]-bdf_SFB;
+		PostSFB.at(i)=PreSFB.at(i)-bdf_SFB;
 		if(i+1>binl&&i+1<binr)
-			*sum_val+=PostSFB[i];
+			*sum_val+=PostSFB.at(i);
 		if(SFBdraw==1)
 		{
-			TG_Post->SetPoint(i,x-.5,PostSFB[i]);
+			TG_Post->SetPoint(i,x-.5,PostSFB.at(i));
 			TG_Visu->SetPoint(i,x-.5,bdf_SFB);
 		}
 	}
@@ -2837,7 +2897,9 @@ int main(int argc, char** argv)
 			if(bkgnd_param==3)
 			{
 				PreSFB.clear();
+				PreSFB.resize(N_STRIPS);
 				PostSFB.clear();
+				PostSFB.resize(N_STRIPS);
 				for(int j=FIRST_ELEC;j<LAST_ELEC;j++) 
 				{
 					charge=electrometer_channel_charge_pC(electro,j+1);
@@ -2846,7 +2908,7 @@ int main(int argc, char** argv)
 						case LabelX:
 							val=charge-EOffX[j];
 							val=val*lissage_factor[j][0];
-							PreSFB[j]=val;
+							PreSFB.at(j)=val;
 							isLabelX=1;
 							strip_min=borne_m_x;
 							strip_max=borne_M_x;
@@ -2854,7 +2916,7 @@ int main(int argc, char** argv)
 						case LabelY:
 							val=charge-EOffY[j];
 							val=val*lissage_factor[j][1];
-							PreSFB[j]=val;
+							PreSFB.at(j)=val;
 							isLabelY=1;
 							strip_min=borne_m_y;
 							strip_max=borne_M_y;
@@ -2870,7 +2932,7 @@ int main(int argc, char** argv)
 				if(bool_print==1)
 					bool_print=2;
 				// for(int iii=0;iii<N_STRIPS;iii++)
-				// 	errrel<<PostSFB[iii]<<" ";
+				// 	errrel<<PostSFB.at(iii)<<" ";
 				// errrel<<endl;
 
 				switch(label)
@@ -2879,7 +2941,7 @@ int main(int argc, char** argv)
 						if(in_area==0)
 							chargeTot_signal_X+=sum_val;
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
-							ChX->SetAt(PostSFB[j],j); 
+							ChX->SetAt(PostSFB.at(j),j); 
 						isLabelX=1;
 						// errrel<<ChX->GetSum()<<" "<<sum_val<<endl;
 					break;
@@ -2887,7 +2949,7 @@ int main(int argc, char** argv)
 						if(in_area==0)
 							chargeTot_signal_Y+=sum_val;
 						for(int j=FIRST_ELEC;j<LAST_ELEC;j++)
-							ChY->SetAt(PostSFB[j],j);
+							ChY->SetAt(PostSFB.at(j),j);
 						isLabelY=1;
 						// errrel<<ChY->GetSum()<<" "<<sum_val<<endl;
 					break;
@@ -4067,9 +4129,15 @@ int main(int argc, char** argv)
 		mean_dose/=count_dose;
 		rms_dose=sqrt(rms_dose/count_dose-(mean_dose*mean_dose));
 
-		cout<<"Irradiation totale; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
+		double dose_beam=0.;
+		for(int i=borne_m_x;i<borne_M_x;i++)
+			for(int j=borne_m_y;j<borne_M_y;j++)
+				dose_beam+=Dose_tot[i][j];
+		cout<<"Dose du faisceau "<<dose_beam<<endl;	
+
+		cout<<"Irradiation totale; Dose max : "<<setprecision(3)<<fixed<<dose_max<<" Gy ; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
 		if(logfileprint==true)
-			logfile<<"Irradiation totale; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
+			logfile<<"Irradiation totale; Dose max : "<<setprecision(3)<<fixed<<dose_max<<" Gy ; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
 
 		cMap->cd(3);
 		TH2_Dose_tot->SetTitle("");//Fluency map (particle/cm2)");
@@ -4239,7 +4307,7 @@ int main(int argc, char** argv)
 	// if(Vect_calib_factor.size()>0)
 	// {
 	// 	for(int i=0;i<Vect_calib_factor.size();i++)
-	// 		cout<<Vect_calib_factor[i]*1000<<" "<<Vect_calib_charge[i]<<" "<<Vect_calib_quanta[i]<<endl;
+	// 		cout<<Vect_calib_factor.at(i)*1000<<" "<<Vect_calib_charge[i]<<" "<<Vect_calib_quanta[i]<<endl;
 	// }
 	// for(int i=0;i<tot_area;i++)
 	// 	cout<<"i "<<vect_charge_t_area[i]<<"; X "<<vect_charge_x_area[i]<<"; Y "<<vect_charge_y_area[i]<<endl;
