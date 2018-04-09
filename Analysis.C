@@ -61,6 +61,8 @@ void EntryParameters(int config_simu)
 	Value_init.push_back(0.);	//	13
 	Variable_init.push_back("Smoothing"); // 14
 	Value_init.push_back(0.);	//	14
+	Variable_init.push_back("Dividing"); // 15
+	Value_init.push_back(0.);	//	15
 
 	cout<<endl;
 	if(logfileprint==true)
@@ -328,13 +330,6 @@ void EntryParameters(int config_simu)
 					}
 					if(ind_value==14)
 					{
-						if(!buffer.compare("no")||!buffer.compare("No"))
-							Value_init[ind_value]=0;
-						if(!buffer.compare("yes")||!buffer.compare("Yes"))
-							Value_init[ind_value]=1;
-					}
-					if(ind_value==15)
-					{
 						lissage_param=0;
 						std::size_t found=buffer.find_first_of(' ');
 						std::string bufferofbuffer=buffer.substr(0,found);
@@ -362,6 +357,38 @@ void EntryParameters(int config_simu)
 								}
 								smooth_file.close();
 								lissage_param=1;
+							}
+						}
+					}
+					if(ind_value==15)
+					{
+						divise_param=0;
+						std::size_t found=buffer.find_first_of(' ');
+						std::string bufferofbuffer=buffer.substr(0,found);
+						if(!bufferofbuffer.compare("no"))
+							divise_param=0;
+						if(!bufferofbuffer.compare("yes")||!bufferofbuffer.compare("Yes"))
+						{
+							int ind=0;
+							int ligne;
+							buffer=buffer.substr(found+1);
+							cout<<"Dividing values stored in file: "<<buffer<<endl;
+							ifstream divide_file(buffer.c_str());
+							if(!divide_file)
+							{
+								cout<<"No dividing file"<<endl;
+								divise_param=0;
+							}
+							else
+							{
+								while(true)
+								{
+									divide_file>>ligne>>divise_factor[ind][0]>>divise_factor[ind][1];
+									ind++;
+									if(divide_file.eof()||ind>N_STRIPS) break;
+								}
+								divide_file.close();
+								divise_param=1;
 							}
 						}
 					}
@@ -516,6 +543,12 @@ void EntryParameters(int config_simu)
 	if(lissage_param==1)
 		cout<<" Smoothing applied"<<endl;
 
+	ivar=15;
+	if(divise_param==0)
+		cout<<" No attenuator used"<<endl;
+	if(divise_param==1)
+		cout<<" Attenuator used"<<endl;
+
 	// for(ivar=4;ivar<Variable_init.size();ivar++)
 	// 	cout<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
 	cout<<"=================================================="<<endl;
@@ -616,6 +649,12 @@ void EntryParameters(int config_simu)
 			logfile<<" No smoothing applied"<<endl;
 		if(lissage_param==1)
 			logfile<<" Smoothing applied"<<endl;
+	
+		ivar=15;
+		if(divise_param==0)
+			logfile<<" No attenuator used"<<endl;
+		if(divise_param==1)
+			logfile<<" Attenuator used"<<endl;
 
 		// for(ivar=4;ivar<Variable_init.size();ivar++)
 		// 	logfile<<" "<<Variable_init[ivar]<<": "<<Value_init[ivar]<<endl;
@@ -643,6 +682,9 @@ double Extremum(double a,double b,double c,double d,double e)
 
 double TEL_value(int material,double e_part)
 {
+
+	return 1.882E-1; // electrons du kinetron
+
 	double Z_part=1.;
 	double dEdX=0.;
 	double density;
@@ -904,20 +946,6 @@ void Calibrage(char *file,double chargeTot_X,double chargeTot_Y)
 	free(vect_dquanta);
 }
 
-void Lissage()
-{
-	ifstream lissage_file("Lissage_LPC.txt");
-	int tmp;
-	if(!lissage_file)
-	{
-		cout<<" No input file for smoothing parameters"<<endl;
-		return;
-	}
-	for(int i=0;i<N_STRIPS;i++)
-		lissage_file>>tmp>>lissage_factor[i][0]>>lissage_factor[i][1];
-	lissage_file.close();
-}
-
 void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],double vect_charge_t[],double vect_charge_x[],double vect_charge_y[])
 {
 	Vect_calib_factor.clear();
@@ -1051,7 +1079,6 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 				in_area=2;
 				current_area+=1;
 				quanta=0;
-				maxx=0.;
 				if(fasterTime>signal_time[current_area][0]&&fasterTime<signal_time[current_area][1])
 				{
 					in_area=0;
@@ -1063,6 +1090,111 @@ void Scaler(char *file,double decimation,int tot_area,double signal_time[][2],do
 					// if((double)rand()/RAND_MAX>0.99)
 					// 	cout<<" "<<j<<" "<<Seuil_quanta[current_area][j]<<" "<<Qth2th<<endl;
 					quanta+=j+1;
+				}
+			}
+		}
+	}
+	faster_file_reader_close(reader);
+}
+
+void QDC(char *file,int tot_area,double signal_time[][2],double vect_charge_t[],double vect_charge_x[],double vect_charge_y[])
+{
+	faster_file_reader_p reader;
+	faster_data_p data;
+	qdc_x4 qdc_meas;
+	reader=faster_file_reader_open(file);
+	TString name_qx;
+	int count=0;
+	int count_mean=0;
+	int label;
+	int current_area=0;
+	int in_area=-1;
+	double t0;
+	double fasterTime;
+	double QX;
+	double QX_mean=0.;
+	double maxx=0.;
+	double maxy;
+
+	TH1F *hQX = new TH1F("hQX","Charge threshold to threshold",100,0.,10000);
+	// TH1F *hQX = new TH1F();
+	t0=-1;
+	t0=Global_t0;
+	// while((data=faster_file_reader_next(reader))!=NULL) 
+	while((data=faster_file_reader_next(reader))!=NULL&&current_area<tot_area) 
+	{
+		label=faster_data_label(data);
+		if(label==LabelQDC)
+		{
+			count++;
+			faster_data_load(data,&qdc_meas);
+			// if(t0==-1)
+			// 	t0=faster_data_clock_sec(data);
+			fasterTime=faster_data_clock_sec(data)-t0;
+			if(fasterTime>signal_time[current_area][0]&&fasterTime<signal_time[current_area][1])
+			{
+				in_area=0;
+				QX=qdc_meas.q1/1000.;
+				if(QX>100.)
+				{
+					count_mean++;
+					QX_mean+=QX;
+				}
+				hQX->Fill(QX);
+			}
+			else
+			{
+				if(in_area==0&&fasterTime>signal_time[current_area][1])
+					in_area=1;
+			}
+			if(count==compt_label[label]&&in_area==0)
+				in_area=1;
+			if(in_area==1)
+			{
+				maxx=0.;
+				for(int i=0;i<hQX->GetNbinsX();i++)
+					if(hQX->GetBinContent(i)>1.&&hQX->GetBinCenter(i)>maxx)
+						maxx=hQX->GetBinCenter(i);
+				maxx+=100.;	
+				// hQX->GetXaxis()->SetRangeUser(0.,maxx);
+
+				in_area=1;
+				name_qx="TH1_QX_";
+				name_qx+=(current_area+1);
+				TCanvas *cQX= new TCanvas(name_qx);
+				cQX->SetCanvasSize(2000,1600);
+				cQX->SetLogy();
+
+				hQX->SetTitle("Charge in PM");
+				hQX->SetTitleSize(0.0);
+				hQX->SetStats(0);
+				hQX->GetXaxis()->SetTitle("Charge (nC)");
+				hQX->GetXaxis()->SetTickSize(0.01);
+				hQX->GetXaxis()->SetTitleSize(0.036);
+				hQX->GetXaxis()->CenterTitle();
+				hQX->GetXaxis()->SetLabelSize(0.02);
+				hQX->GetYaxis()->SetTitle("Count (u.a)");
+				hQX->GetYaxis()->SetTickSize(0.01);
+				hQX->GetYaxis()->SetTitleSize(0.036);
+				hQX->GetYaxis()->CenterTitle();
+				hQX->GetYaxis()->SetLabelSize(0.02);
+				hQX->Draw();
+				name_qx="Picture/QX_";
+				name_qx+=(current_area+1);
+				name_qx+=".png";
+				hQX->Write(name_qx);
+				cQX->SaveAs(name_qx);
+				hQX->Reset();
+				cQX->Destructor();
+				
+				cout<<"Charge moyenne : "<<QX_mean/count_mean<<endl;
+				in_area=2;
+				current_area+=1;
+				if(fasterTime>signal_time[current_area][0]&&fasterTime<signal_time[current_area][1])
+				{
+					in_area=0;
+					QX=qdc_meas.q1;
+					hQX->Fill(QX);
 				}
 			}
 		}
@@ -1847,6 +1979,7 @@ void ChargeSignalArea(char *file,int *tot_area,double signal_time[][2])
 	TG_Charge->SetLineColor(2);
 	TG_Charge->SetLineWidth(1.5);
 	TG_Charge->SetTitle("Charge total over time");
+	// TG_Charge->GetXaxis()->SetRangeUser(30.,31);
 	TG_Charge->GetXaxis()->SetTitle("Time (s)");
 	TG_Charge->GetXaxis()->SetTickSize(0.01);
 	TG_Charge->GetXaxis()->SetTitleSize(0.06);
@@ -2711,7 +2844,18 @@ int main(int argc, char** argv)
 	if(argc>1)
 		config_simu=(int)atof(argv[1]);
 
+	for(int i=0;i<N_STRIPS;i++)
+	{
+		lissage_factor[i][0]=1.;
+		lissage_factor[i][1]=1.;
+		divise_factor[i][0]=1.;
+		divise_factor[i][1]=1.;
+	}
+
 	EntryParameters(config_simu);
+
+	// for(int i=0;i<N_STRIPS;i++)
+	// 	cout<<lissage_factor[i][0]<<" "<<lissage_factor[i][1]<<" "<<divise_factor[i][0]<<" "<<divise_factor[i][1]<<endl;
 
 	if(calibrage_used==6&&energy_used==1)
 	{
@@ -2766,8 +2910,6 @@ int main(int argc, char** argv)
 	{
 		ProfilX[j]=0;
 		ProfilY[j]=0;
-		lissage_factor[j][0]=1.;
-		lissage_factor[j][1]=1.;
 		for(int i=0;i<N_STRIPS;i++)
 			Dose_tot[i][j]=0.;
 	}
@@ -2783,9 +2925,6 @@ int main(int argc, char** argv)
 	AreaY->Reset();
 	TotalX->Reset();
 	TotalY->Reset();
-
-	if(lissage_param==1)
-		Lissage();
 
 	if(area_find_param==0)
 		DerivativeSignalArea(filename,&tot_area,signal_time);
@@ -2888,6 +3027,8 @@ int main(int argc, char** argv)
 			calib_factor=area_calib[count_area]*pow(strip_width,2)/1000.;
 			if(calib_factor!=0.)
 				calib_factor=1./calib_factor;
+			if(in_area!=0)
+				calib_factor=0.;
 			// calib_factor=1.;
 
 			mid_signal=signal_time[count_area][0]+(signal_time[count_area][1]-signal_time[count_area][0])/2.;
@@ -2907,7 +3048,7 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
-							val=val*lissage_factor[j][0];
+							val=val/lissage_factor[j][0]*divise_factor[j][0];
 							PreSFB.at(j)=val;
 							isLabelX=1;
 							strip_min=borne_m_x;
@@ -2915,7 +3056,7 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
-							val=val*lissage_factor[j][1];
+							val=val/lissage_factor[j][1]*divise_factor[j][0];
 							PreSFB.at(j)=val;
 							isLabelY=1;
 							strip_min=borne_m_y;
@@ -2965,7 +3106,7 @@ int main(int argc, char** argv)
 					{
 						case LabelX:
 							val=charge-EOffX[j];
-							val=val*lissage_factor[j][0];
+							val=val/lissage_factor[j][0]*divise_factor[j][0];
 							if(in_area==0)
 							// if(in_area==0&&(j>=borne_m_x&&j<borne_M_x)) // taille du plastique
 								chargeTot_signal_X+=val;
@@ -2977,7 +3118,7 @@ int main(int argc, char** argv)
 						break;
 						case LabelY:
 							val=charge-EOffY[j];
-							val=val*lissage_factor[j][1];
+							val=val/lissage_factor[j][1]*divise_factor[j][0];
 							if(in_area==0)
 							// if(in_area==0&&(j>=borne_m_y&&j<borne_M_y)) // taille du plastique
 								chargeTot_signal_Y+=val;
@@ -3032,9 +3173,9 @@ int main(int argc, char** argv)
 				else
 					vect_charge_cumul[count_tot]=(ChX->GetSum()+ChY->GetSum())/2.;
 
-				calib_factor=area_calib[count_area]*pow(strip_width,2)/1000.;
-				if(calib_factor!=0.)
-					calib_factor=1./calib_factor;
+				// calib_factor=area_calib[count_area]*pow(strip_width,2)/1000.;
+				// if(calib_factor!=0.)
+				// 	calib_factor=1./calib_factor;
 				// calib_factor=1.;
 	
 				if(count_tot>0)
@@ -3078,6 +3219,7 @@ int main(int argc, char** argv)
 				// for(int jj=0;jj<N_STRIPS;jj++)
 				// 	cout<<jj+1<<" "<<AreaX->GetAt(jj)/duration<<" "<<AreaY->GetAt(jj)/duration<<endl;
 				// cout<<"------------------------"<<endl;
+
 				for(int jj=0;jj<N_STRIPS;jj++)
 				{
 					val=TotalX->GetAt(jj)+AreaX->GetAt(jj);
@@ -3456,7 +3598,8 @@ int main(int argc, char** argv)
 				yt-=ydecal;
 				if(calibrage_used!=0)
 				{
-					Texte->DrawText(xt,yt,"Particule : proton");
+					Texte->DrawText(xt,yt,"Particule");
+					// Texte->DrawText(xt,yt,"Particule : proton");
 					yt-=ydecal;
 					text_tmp.Form("Calibrage : %3.3E fC/part.",area_calib[count_area]);
 					Texte->DrawText(xt,yt,text_tmp);
@@ -3925,6 +4068,7 @@ int main(int argc, char** argv)
 	{
 		Profil_x->SetBinContent(j+1,ProfilX[j]);
 		Profil_y->SetBinContent(j+1,ProfilY[j]);
+		// cout<<j<<" "<<ProfilX[j]<<" "<<ProfilY[j]<<endl;
 		for(int k=0;k<N_STRIPS;k++)
 		{
 			Map[j][k]=ProfilX[j]*ProfilY[k]/(sum_x*sum_y)*(sum_x+sum_y)/2.;
@@ -4102,10 +4246,10 @@ int main(int argc, char** argv)
 				TH2_Dose_tot->SetBinContent(i+1,j+1,Dose_tot[i][j]);
 
 		dose_max=TH2_Dose_tot->GetBinContent(TH2_Dose_tot->GetMaximumBin());
-		contours[0] = 0.*dose_max;
-		contours[1] = 0.2*dose_max;
-		contours[2] = 0.5*dose_max;
-		contours[3] = 0.9*dose_max;
+		contours[0]=0.*dose_max;
+		contours[1]=.2*dose_max;
+		contours[2]=.5*dose_max;
+		contours[3]=.9*dose_max;
 
 		Dose_dist_tot->SetName("Dose distribution");
 		Dose_dist_tot->SetBins(25,dose_max*.1,dose_max*1.1);
@@ -4129,11 +4273,11 @@ int main(int argc, char** argv)
 		mean_dose/=count_dose;
 		rms_dose=sqrt(rms_dose/count_dose-(mean_dose*mean_dose));
 
-		double dose_beam=0.;
-		for(int i=borne_m_x;i<borne_M_x;i++)
-			for(int j=borne_m_y;j<borne_M_y;j++)
-				dose_beam+=Dose_tot[i][j];
-		cout<<"Dose du faisceau "<<dose_beam<<endl;	
+		// double dose_beam=0.;
+		// for(int i=borne_m_x;i<borne_M_x;i++)
+		// 	for(int j=borne_m_y;j<borne_M_y;j++)
+		// 		dose_beam+=Dose_tot[i][j];
+		// cout<<"Dose du faisceau "<<dose_beam<<endl;	
 
 		cout<<"Irradiation totale; Dose max : "<<setprecision(3)<<fixed<<dose_max<<" Gy ; Dose moyenne dans les 90% de "<<setprecision(3)<<fixed<<mean_dose<<" Gy +/- "<<rms_dose/mean_dose*100.<<" %"<<endl;
 		if(logfileprint==true)
@@ -4303,6 +4447,8 @@ int main(int argc, char** argv)
 		Scaler(filename,1./100.,tot_area,signal_time,vect_charge_t_area,vect_charge_x_area,vect_charge_y_area);
 	else
 		cout<<"Pas de données de mesure scaler"<<endl;
+
+	QDC(filename,tot_area,signal_time,vect_charge_t_area,vect_charge_x_area,vect_charge_y_area);
 
 	// if(Vect_calib_factor.size()>0)
 	// {

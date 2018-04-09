@@ -1,14 +1,16 @@
-File: Acq_1_53cm_1nA_0001.fast
-Path for the file: /home/garrido/Dosion/Arronax/06_2017/
-Background extraction (yes/no sub/function/default): default
-Irradiation area finding way (charge/derivative/quanta/manual): manual
-Boundaries (s): 40. 60.
-Threshold: 40400.
-Exclusion strips X: 11 21
-Exclusion strips Y: 13 23 
-Calibrate particle: proton_Arronax_68_MeV
-Particle energy: 0.
-Time sampling (s): 1.
+File: Dosion_PM_1_0001.fast
+Path for the file: Kinetron/03_2018/
+Background extraction (yes/no sub/function/default): yes
+Irradiation area finding way (charge/derivative/quanta/manual): charge
+Boundaries (s): 65.62 65.63
+Threshold: 40300.
+Exclusion strips X: 10 20
+Exclusion strips Y: 17 27 
+Calibrate data: 0.009574
+Particle energy: 4.5
+Time sampling (s): 1000.
 Acquisition time for electronic offset (s): 20.
 Integration steps: 50
-Gaussian to fit: 2
+Gaussian to fit: 1
+Smoothing: yes Lissage_CPO.txt
+Dividing: yes Diviseur_100.txt

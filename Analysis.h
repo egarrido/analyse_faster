@@ -42,12 +42,13 @@
 #include "fasterac/fasterac.h"
 #include "fasterac/electrometer.h"
 #include "fasterac/scaler.h"
+#include "fasterac/qdc.h"
 
 #include "Seuil_data.h"
 #include "Calibrage_data.h"
 // #include "Label_Arronax.h"	// 11-12
-// #include "Label_CPO.h"	// 1-2
-#include "Label_Cyrce.h"	// 5-6
+#include "Label_CPO.h"	// 1-2
+// #include "Label_Cyrce.h"	// 5-6
 
 std::ofstream logfile;
 const bool logfileprint=true;
@@ -95,6 +96,7 @@ int calibrage_used=0;
 int energy_used=0;
 int area_find_param=0;
 int lissage_param=0;
+int divise_param=0;
 int Strip_label;
 int Strip_number;
 int borne_m_x=16;
@@ -164,6 +166,7 @@ double debut_eoff;
 double fin_eoff;
 double offXY[N_STRIPS][2];
 double lissage_factor[N_STRIPS][2];
+double divise_factor[N_STRIPS][2];
 
 void set_plot_style()
 {
