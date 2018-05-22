@@ -99,9 +99,10 @@ Le fichier de paramètres d'entrée se compose de la sorte
     Y, valeurs possibles 1 ou 2.
 
     Smoothing: Utilise des valeurs pré-calculées pour chaque Dosion afin de lisser la réponse des
-    pistes.
+    pistes. Dans le cas d'une utilisation, il faut indiquer le nom du fichier après le "yes".
 
-    Chamber value (Gy): La valeur donnée par une éventuelle chambre placée sous le faisceau.
+    Dividing: Utilisation (yes) ou non (no) d'un atténuateur de charges. Dans ce cas il faut
+    indiquer le nom du fichier après le "yes".
 
 L'ordre dans le fichier d'entrée n'a pas d'importance. Il n'est pas non plus obligatoire de mettre
 toutes les lignes, dans le cas contraire, la valeur par défaut utilisée sera de 0.

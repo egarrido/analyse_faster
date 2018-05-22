@@ -13,4 +13,4 @@ Acquisition time for electronic offset (s): 20.
 Integration steps: 50
 Gaussian to fit: 1
 Smoothing: yes Lissage_CPO.txt
-Dividing: yes Diviseur_100.txt
+Dividing: no Diviseur_100.txt

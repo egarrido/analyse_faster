@@ -1,15 +1,16 @@
-File: Double_01_0001.fast
+File: PBS_05_0001.fast
 Path for the file: CPO/02_2018/
 Background extraction (yes/no sub/function/default): yes
 Irradiation area finding way (charge/derivative/quanta/manual): charge
 Boundaries (s): 21. 125.
-Threshold: 40300.
+Threshold: 8025.
 Exclusion strips X: 10 20
 Exclusion strips Y: 17 27 
-Calibrate data: 0.1464
-Particle energy: 17.83
+Calibrate data: 
+Particle energy: 100.
 Time sampling (s): 1000.
-Acquisition time for electronic offset (s): 20.
-Integration steps: 50
+Acquisition time for electronic offset (s): 10.
+Integration steps: 10
 Gaussian to fit: 1
 Smoothing: yes Lissage_CPO.txt
+Dividing: yes Diviseur_10000.txt

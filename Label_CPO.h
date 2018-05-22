@@ -1,5 +1,5 @@
-const int LabelX=1;
-const int LabelY=2;
+const int LabelX=4;
+const int LabelY=6;
 const int LabelQDC=9;
 const int LabelScaler=10;
 const int LabelCount=1000;

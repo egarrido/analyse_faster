@@ -683,7 +683,7 @@ double Extremum(double a,double b,double c,double d,double e)
 double TEL_value(int material,double e_part)
 {
 
-	return 1.882E-1; // electrons du kinetron
+	// return 1.882E-1; // electrons du kinetron
 
 	double Z_part=1.;
 	double dEdX=0.;
