@@ -21,7 +21,8 @@ Le dossier doit contenir les fichiers :
   libraire Analysis.h
 
 Les sous-dossiers :
-    Entry/    - Contient les fichiers d'entrée de toutes les différentes configurations.
+    Entry/    - Contient les fichiers d'entrée de toutes les différentes configurations, ainsi que
+                le fichier définissant les chemins Entry_path.txt
     Ouput/    - Contient les fichiers de sortie qui sont stockés dans un dossier propre à chaque 
                 fichier faster.
     Picture/  - Contient les images générées lors de la dernière exécution du programme.
